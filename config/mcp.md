@@ -39,7 +39,7 @@ export LINGXING_MCP_KEY="replace-with-local-secret"
 
 ## Codex 配置方式
 
-Codex 的 MCP 配置位于 `~/.codex/config.toml`，也可以在可信项目中使用项目级 `.codex/config.toml`。本仓库不提交真实 MCP 配置文件，避免泄露地址或密钥。
+Codex 的 MCP 配置位于 `~/.codex/config.toml`，也可以在可信项目中使用项目级 `.codex/config.toml`。本公开仓库已整体忽略 `.codex/`；不要用强制 add 绕过该保护，也不要提交真实 MCP 地址、header 绑定或密钥。
 
 Streamable HTTP MCP server 在 Codex 中使用 `url` 配置；Bearer Token 使用 `bearer_token_env_var`，自定义请求头使用 `env_http_headers` 指向环境变量，避免把密钥写入配置。
 

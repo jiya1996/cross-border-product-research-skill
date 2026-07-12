@@ -5,6 +5,9 @@
 ## 任务背景和平台适配器
 
 - seller_id: `_example`
+- 市场: US
+- source_report_id: `reports/_example/2026-07-06_tiktok-pet-products.md`
+- decision_session_id: `session-example-20260706-pet-a`
 - 平台: TikTok / 推荐电商
 - 读取策略: `references/platforms/tiktok.md`
 - 评分标尺: `references/checklists/scoring-rubric.md`
@@ -16,11 +19,11 @@
 
 ## 候选清单
 
-| 品名 | 类目 | demand | competition | margin | capability_fit | risk | 总分 |
-|---|---|---:|---:|---:|---:|---:|---:|
-| LED pet collar | 宠物夜间出行 | 4 | 3 | 3 | 4 | 2 | 3.3 |
-| Mini desk vacuum | 桌面清洁 | 3 | 1 | 3 | 4 | 3 | 2.8 |
-| Glass storage jar | 厨房收纳 | 2 | 2 | 2 | 2 | 1 | 1.8 |
+| candidate_id | 品名 | 类目 | demand | competition | margin | capability_fit | risk | 总分 |
+|---|---|---|---:|---:|---:|---:|---:|---:|
+| tt-001 | LED pet collar | 宠物夜间出行 | 4 | 3 | 3 | 4 | 2 | 3.3 |
+| tt-002 | Mini desk vacuum | 桌面清洁 | 3 | 1 | 3 | 4 | 3 | 2.8 |
+| tt-003 | Glass storage jar | 厨房收纳 | 2 | 2 | 2 | 2 | 1 | 1.8 |
 
 ## 为什么适合你
 

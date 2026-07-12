@@ -9,7 +9,7 @@
 ## 录屏前准备
 
 ```bash
-cd /Users/builder/002跨境电商选品
+# 先进入本仓库根目录
 python3 scripts/verify_delivery.py
 python3 scripts/run_video_demo.py
 ```
@@ -18,9 +18,9 @@ python3 scripts/run_video_demo.py
 
 - `references/demo-opening-positioning.md`
 - `skills/product-research/SKILL.md`
-- `sellers/video-demo/profile.yaml`
-- `sellers/video-demo/sop.md`
-- `reports/video-demo/YYYY-MM-DD_video-full-trace.md`
+- `sellers/video-demo-<run-id>/profile.yaml`
+- `sellers/video-demo-<run-id>/sop.md`
+- `reports/video-demo-<run-id>/YYYY-MM-DD_video-full-trace.md`（以控制台打印的本次路径为准）
 - `evals/product-research/README.md`
 
 ## 分镜
@@ -32,8 +32,8 @@ python3 scripts/run_video_demo.py
 | 1:30–2:00 | `check_data_access.py` 输出 | 诚实展示：合成 demo 已就绪，live MCP 尚未验证；不能把“写了配置说明”说成“已经接入”。 |
 | 2:00–3:15 | before 报告 | 展示 Top、实际权重、逐候选“为什么适合你/不适合你”、主要风险、被过滤品。 |
 | 3:15–4:05 | decisions 与 profile | 三个同款过多/差异化不足的拒绝样本，原话和标签都落文件。说明下一步会用一位卖家最近一次真实选品做结构化复盘，但本次不把合成记录冒充真人证据。 |
-| 4:05–4:50 | unconfirmed 报告 | learned 候选是 `confirmed: false`；排名和 before 完全相同，防止模型擅自污染画像。 |
-| 4:50–5:40 | confirm 与 after 报告 | 人工确认后，Shoe crease protector 等命中候选降权，Top 3 发生可见变化；变化只证明机制生效，不证明利润提升。 |
+| 4:05–4:50 | proposed 报告 | learned 候选是 `status: proposed`；排名和 before 完全相同，防止模型擅自污染画像。 |
+| 4:50–5:40 | confirm 与 after 报告 | 演示脚本用合成操作者身份模拟已获授权的确认；之后只有同时带“同款密度高 + 差异化空间小”结构化标签的候选降权。`Shoe crease protector` 仅命中一个标签，不得被误伤。排序变化只证明机制生效，不证明真人授权或利润提升。 |
 | 5:40–6:30 | `eval-pressure-test.md` 与 X01 | 先忠实按用户热度排 A>B，再把完整合成成本纳入后变成 B>A；强调缺成本绝不编。 |
 | 6:30–7:20 | 工具角色表 | 卖家精灵/SIF 负责只读市场证据；领星先从用户核实的 XLSX 历史回测开始，不声称已接 API 或能做 90 天预测；虎步只在重复导入痛点成立后承担白名单报表搬运，必须保留原始 provider 且零写操作。 |
 | 7:20–8:20 | eval artifacts / `evals/product-research/README.md` | 26 cases、100 分 rubric；展示领星/虎步来源边界，以及催评、提现、广告、登录和自动上架被拒，并检查结构化工具调用。 |
@@ -47,7 +47,7 @@ python3 scripts/run_video_demo.py
 
 1. `Glass storage jar` / `Magnetic spice jars` 被画像和 SOP 过滤；
 2. 每个候选都引用 `profile.capabilities.content_skill`、`profile.preferences.*`；
-3. `confirmed: false` 不改排序，`confirmed: true` 后排序发生变化。
+3. `status: proposed` 不改排序，显式迁移成 `status: active` 后排序发生变化；视频中的操作者是合成身份。
 
 ## 真实复盘与经营数据边界（必须说）
 

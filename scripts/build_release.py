@@ -7,6 +7,9 @@ import argparse
 import datetime as dt
 import hashlib
 import json
+import os
+import stat
+import subprocess
 import zipfile
 from pathlib import Path
 
@@ -28,9 +31,16 @@ SAFE_SELLER_PREFIX = "sellers/_example/"
 SAFE_REPORTS = {
     "reports/.gitkeep",
     "reports/_example/2026-07-06_tiktok-pet-products.md",
+    "reports/_example/2026-07-06_tiktok-desk-accessories.md",
 }
-BLOCKED_PARTS = {"artifacts", "__pycache__", ".git", "dist"}
+BLOCKED_PARTS = {"artifacts", "__pycache__", ".git", ".codex", "dist"}
 BLOCKED_NAMES = {".env", ".env.local", ".DS_Store"}
+BLOCKED_CONTENT = {
+    b"/" + b"Users/": "machine-specific macOS path",
+    b"C:" + b"\\Users\\": "machine-specific Windows path",
+    b"-----BEGIN " + b"OPENSSH PRIVATE KEY-----": "private key",
+    b"-----BEGIN " + b"PRIVATE KEY-----": "private key",
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -53,15 +63,66 @@ def allowed(rel: Path) -> bool:
 
 
 def release_files() -> list[Path]:
-    files = []
-    for path in ROOT.rglob("*"):
-        if path.is_file() and allowed(path.relative_to(ROOT)):
-            files.append(path)
+    """Return only files already present in the Git index and public allowlist."""
+
+    completed = subprocess.run(
+        ["git", "-C", str(ROOT), "ls-files", "-z", "--cached"],
+        capture_output=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        detail = completed.stderr.decode("utf-8", errors="replace").strip()
+        raise SystemExit(f"Cannot read Git index for release build: {detail}")
+
+    files: list[Path] = []
+    root_resolved = ROOT.resolve()
+    for raw in completed.stdout.split(b"\0"):
+        if not raw:
+            continue
+        rel = Path(os.fsdecode(raw))
+        if not allowed(rel):
+            continue
+        path = ROOT / rel
+        if not path.exists():
+            raise SystemExit(f"Tracked release file is missing: {rel.as_posix()}")
+        cursor = ROOT
+        for part in rel.parts:
+            cursor = cursor / part
+            if cursor.is_symlink():
+                raise SystemExit(f"Symlink forbidden in release: {rel.as_posix()}")
+        try:
+            path.resolve(strict=True).relative_to(root_resolved)
+        except (OSError, ValueError) as exc:
+            raise SystemExit(f"Release path escapes repository: {rel.as_posix()}") from exc
+        if not path.is_file():
+            raise SystemExit(f"Tracked release entry is not a regular file: {rel.as_posix()}")
+        files.append(path)
     return sorted(files, key=lambda path: path.relative_to(ROOT).as_posix())
 
 
-def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+def sha256(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
+def read_payload(path: Path) -> bytes:
+    """Read one regular file without following a final-component symlink."""
+
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise SystemExit(
+            f"Cannot safely open release file: {path.relative_to(ROOT)}"
+        ) from exc
+    try:
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            raise SystemExit(
+                f"Release entry is not a regular file: {path.relative_to(ROOT)}"
+            )
+        with os.fdopen(descriptor, "rb", closefd=False) as stream:
+            return stream.read()
+    finally:
+        os.close(descriptor)
 
 
 def validate_names(names: list[str]) -> None:
@@ -75,17 +136,28 @@ def validate_names(names: list[str]) -> None:
             raise SystemExit(f"Sensitive or generated path in release: {name}")
 
 
+def validate_content(payloads: list[tuple[Path, bytes]]) -> None:
+    for path, payload in payloads:
+        for marker, label in BLOCKED_CONTENT.items():
+            if marker in payload:
+                raise SystemExit(
+                    f"Unsafe {label} in release file: {path.relative_to(ROOT)}"
+                )
+
+
 def main() -> None:
     args = parse_args()
     output = args.output.expanduser().resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     files = release_files()
+    payloads = [(path, read_payload(path)) for path in files]
+    validate_content(payloads)
     entries = [
         {
             "path": path.relative_to(ROOT).as_posix(),
-            "sha256": sha256(path),
+            "sha256": sha256(payload),
         }
-        for path in files
+        for path, payload in payloads
     ]
     validate_names([entry["path"] for entry in entries])
     manifest = {
@@ -95,16 +167,25 @@ def main() -> None:
         "entries": entries,
     }
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for path in files:
-            archive.write(path, path.relative_to(ROOT).as_posix())
+        for path, payload in payloads:
+            archive.writestr(path.relative_to(ROOT).as_posix(), payload)
         archive.writestr(
             "RELEASE_MANIFEST.json",
             json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
         )
     with zipfile.ZipFile(output) as archive:
-        validate_names([name for name in archive.namelist() if name != "RELEASE_MANIFEST.json"])
+        archive_names = [
+            name for name in archive.namelist() if name != "RELEASE_MANIFEST.json"
+        ]
+        validate_names(archive_names)
         if archive.testzip() is not None:
             raise SystemExit("ZIP integrity check failed")
+        expected_hashes = {entry["path"]: entry["sha256"] for entry in entries}
+        if set(archive_names) != set(expected_hashes):
+            raise SystemExit("ZIP entries do not match release manifest")
+        for name, expected_hash in expected_hashes.items():
+            if sha256(archive.read(name)) != expected_hash:
+                raise SystemExit(f"ZIP payload hash mismatch: {name}")
     print(f"Built {output}")
     print(f"Files: {len(entries)}")
 

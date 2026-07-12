@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run all offline delivery gates and produce one fresh synthetic demo report."""
+"""Run all offline delivery gates, including the video learned-rule regression."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ COMMANDS = [
     [sys.executable, "scripts/run_product_research_evals.py", "--mode", "static"],
     [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"],
     [sys.executable, "scripts/check_data_access.py", "--json"],
+    [sys.executable, "scripts/run_video_demo.py"],
     [
         sys.executable,
         "scripts/run_demo.py",
@@ -25,6 +26,8 @@ COMMANDS = [
         "8",
         "--label",
         "delivery-verify",
+        "--output-dir",
+        "evals/product-research/artifacts/verify-delivery",
     ],
 ]
 

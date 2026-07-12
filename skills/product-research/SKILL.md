@@ -51,7 +51,7 @@ description: 画像感知的跨境电商选品技能。按卖家画像与平台�
 
 若 profile 或 SOP 不存在，停止选品并转 `intake-interview`。不得先给“临时推荐”。
 
-读取完成后，在工作笔记中列出：`seller_id`、平台/站点、硬约束、能力短板、偏好权重、已确认 learned 规则、未确认 learned 规则数量。未确认规则只展示，不参与过滤和打分。
+读取完成后，在工作笔记中列出：`seller_id`、平台/站点、硬约束、能力短板、偏好权重、`active` learned 规则，以及 `proposed/revoked/expired/superseded` 规则数量。learned 不改变硬过滤；只有 `active` 规则参与打分，其他状态只展示。
 
 ## 2. 识别平台与数据角色
 
@@ -150,8 +150,13 @@ description: 画像感知的跨境电商选品技能。按卖家画像与平台�
 
 - profile 自定义权重可覆盖默认权重，报告必须列出实际权重；
 - 每个维度同时输出 `score`、`evidence`、`missing`、`confidence`；
-- `learned.confirmed: false` 永远不参与；
-- confirmed learned 规则必须显示影响了哪个维度和调整前后分值；
+- `learned.status` 只有 `active` 可以参与；`proposed/revoked/expired/superseded` 永远不参与；
+- 状态映射固定为：`status: proposed` 表示待确认，`status: active` 表示唯一可执行状态；
+- 即使 profile 中手工写成 `active`，应用前仍必须重读每条 `decision_path`，复核 rejected、显式 `归类标签ID`、独立 session、来源报告路径及候选表中的 `candidate_id`；任一失败则停止应用并报告记忆完整性错误；
+- active learned 规则必须显示 `rule_id`、命中候选、影响维度和调整前后分值；
+- learned 规则只能按结构化 `condition_tag_ids` 做子集匹配，并执行单一评分维度的整数 `delta`；禁止从自然语言摘要推断动作；
+- 多条规则可以重用证据，但每条必须独立处于 `active`。同一候选/维度同时命中多条规则时，先汇总全部 `delta`，再对该维度只 clamp 一次到 0–5；规则的 YAML 顺序不得改变结果；
+- 报告必须列出参与叠加的全部 `rule_id`，以及该维度的 aggregate delta、before 和 after；
 - 不允许把“数据缺失”自动换算成中性 2 或 3 分；缺失维度保持 `N/A`，并降低排序置信度；
 - 只有分母完整一致的候选才能精确排序；否则用“暂定区间/待核实组”。
 
@@ -203,7 +208,8 @@ description: 画像感知的跨境电商选品技能。按卖家画像与平台�
 - 是否按具体工具名启用只读能力，并明确拒绝催评、提现、广告、店铺登录、上架和履约写操作？
 - 是否让禁做类目、禁做属性和资金红线先于打分生效？
 - 是否把缺数据保留为 `N/A`/`需人工核实`，没有自动补中性分或费率？
-- 是否只应用了 confirmed learned 规则？
+- 是否只应用了状态为 `active` 且未过期的 learned 规则？
+- 是否把停用规则以 `rule_id + status` 保留在报告中，而没有让它们影响评分？
 - 是否每个 Top 候选都有双向个性化归因和明确字段引用？
 - 是否展示了被过滤品、样本边界与来源日期？
 - 是否只做只读查询与报告写盘？

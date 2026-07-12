@@ -101,14 +101,50 @@ preferences:
   margin_floor_pct: 30      # 毛利率红线
   review_moat_max: 500      # 竞品平均评论数超过此值视为门槛过高
 
-# D. 学习到的规则（只允许 profile-update 技能写入，人工确认后生效）
+# D. 学习到的规则（v2；权威字段见 references/schemas/profile-template.yaml）
 learned:
-  - rule: ""                # 如"用户连续3次拒绝季节性产品→季节性列为负向因子"
-    evidence: []            # 指向 decisions/ 中的文件
-    confirmed: false        # 人工确认前不参与打分
+  - rule_id: "learned_example_001"
+    version: 1
+    summary: "结构化条件命中的候选降低 competition 1 分"
+    status: proposed         # 只有 active 参与打分
+    scope:
+      platforms: [tiktok]
+      markets: [US]
+      categories: []
+    condition_tag_ids: [same_product_density_high, differentiation_space_low]
+    action:
+      dimension: competition
+      delta: -1
+    evidence:
+      - decision_path: decisions/2026-07-01_a.md
+        decision_id: dec-a
+        session_id: "report-date:reports/demo/a.md|2026-07-01"
+        source_report_id: reports/demo/a.md
+        candidate_id: candidate-a
+        decided_at: "2026-07-01"
+      - decision_path: decisions/2026-07-01_b.md
+        decision_id: dec-b
+        session_id: "report-date:reports/demo/a.md|2026-07-01"
+        source_report_id: reports/demo/a.md
+        candidate_id: candidate-b
+        decided_at: "2026-07-01"
+      - decision_path: decisions/2026-07-02_c.md
+        decision_id: dec-c
+        session_id: "report-date:reports/demo/b.md|2026-07-02"
+        source_report_id: reports/demo/b.md
+        candidate_id: candidate-c
+        decided_at: "2026-07-02"
+    created: "YYYY-MM-DD"
+    confirmed_by: null
+    confirmed_at: null
+    revoked_by: null
+    revoked_at: null
+    revoke_reason: null
+    expires_at: null
+    supersedes: null
 ```
 
-**验收标准：** schema 有注释、有示例；`learned` 区块必须带 `evidence` 和 `confirmed` 字段，未确认的规则不得影响推荐。
+**验收标准：** schema 有注释、有完整三证据示例；规则必须有稳定 `rule_id`、结构化 conditions/action、审计字段和 `status`。`proposed / revoked / expired / superseded` 均不得影响打分。
 
 ---
 
@@ -173,10 +209,16 @@ learned:
 
 ```markdown
 # 2026-07-06 | pet-grooming-glove
+- 决策ID: dec-seller-20260706-tt001
+- 候选ID: tt-001
+- 决策会话ID: session-seller-20260706-a
+- 决策发生日期: 2026-07-06
+- 来源类型: report_feedback
 - 来源报告: reports/{seller_id}/2026-07-06_宠物类目.md
 - 用户决定: rejected        # accepted / rejected / watchlist
 - 用户原话: "太吃广告了，这个词CPC得3刀往上"
-- 归类标签: [广告依赖度高, CPC超预期]   # 从固定标签集选择，可新增
+- 归类标签ID: [ad_high_dependency, cpc_over_budget]
+- 归类标签: [广告依赖度高, CPC超预期]
 - 涉及画像字段: capabilities.ad_skill, preferences.margin_floor_pct
 ```
 
@@ -188,11 +230,12 @@ learned:
 ### 4.4 profile-update（画像自更新）
 
 - 触发：手动运行，或 decisions/ 新增满 10 条。
-- 行为：读取全部决策日志，按标签聚合，发现模式（如"rejected 中 60% 带
-  '季节性'标签"），生成候选规则写入 `profile.yaml` 的 `learned` 区块，
-  `confirmed: false`，并输出一份变更摘要请用户逐条确认。
+- 行为：读取全部决策日志，按稳定标签 ID 聚合。只有至少 3 条 rejected
+  证据、覆盖至少 2 个独立会话且条件标签在每条证据中共现时，才生成
+  `status: proposed` 的结构化候选规则，并输出变更摘要请用户逐条确认。
 - 硬性要求：**永远不直接修改 A/B/C 区块**，只能建议；用户确认后才把
-  `confirmed` 改为 true。防止画像被模型幻觉污染。
+  指定 `rule_id` 改为 `status: active` 并写确认人/时间。撤销时保留原证据和
+  `revoked_by / revoked_at / revoke_reason`，防止画像被模型幻觉污染。
 
 ---
 
@@ -225,7 +268,8 @@ learned:
    等销售数据，用"用户接受/拒绝"作为代理信号先把学习闭环跑起来；
    outcomes/ 目录留到第二阶段。
 2. **画像污染。** 模型可能过度概括（拒绝两次就总结出一条规则）。对策
-   已内置：learned 规则需 evidence≥3 条 + 人工 confirmed 才生效。
+   已内置：learned 规则需 evidence≥3 条、≥2 个独立会话，并由人工把
+   指定 rule_id 从 proposed 确认为 active 才生效。
 3. **MCP 成本。** 卖家精灵 MCP 按量计费，product-research 技能中应加
    缓存约定：同一 ASIN/类目 7 天内的查询结果落盘复用，写进 SKILL.md。
 4. **开源基底更新。** fork 后与上游解耦，不追更新；只借流程框架，
