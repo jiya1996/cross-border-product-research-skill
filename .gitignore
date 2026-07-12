@@ -1,0 +1,27 @@
+.env
+.env.*
+!.env.example
+*.local
+.DS_Store
+
+# Black-box eval runs may contain model traces and temporary seller fixtures.
+evals/product-research/artifacts/
+
+# Reproducible binary delivery; build from scripts/build_release.py.
+dist/
+
+# Superseded one-off review exports; the repository source is the review target.
+claude-skill-review-package.zip
+github-upload/
+
+# Real seller memory and generated reports may contain commercial secrets.
+# Keep only safe placeholders and demo data in the public repository.
+sellers/*
+!sellers/.gitkeep
+!sellers/_example/
+!sellers/_example/**
+
+reports/*
+!reports/.gitkeep
+!reports/_example/
+!reports/_example/**

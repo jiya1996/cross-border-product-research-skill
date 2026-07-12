@@ -1,0 +1,46 @@
+meta:
+  seller_id: "eval-content"
+  created: "2026-07-11"
+  updated: "2026-07-11"
+  intake_source: "synthetic_eval"
+
+constraints:
+  target_marketplaces: [tiktok-us, amazon-us]
+  target_countries: [US]
+  capital_per_sku_max: 30000
+  capital_currency: "CNY"
+  cash_cycle_tolerance_days: 45
+  forbidden_categories: [食品, 医疗器械, 儿童安全用品]
+  forbidden_attributes: [液体, 粉末, 刀具, 强磁, 侵权图案, 大件易碎]
+  logistics_modes: [FBA, 轻小件直发]
+
+capabilities:
+  supply_chain: "1688采购"
+  ad_skill: 3
+  content_skill: 5
+  compliance_experience: [FCC]
+  languages: [zh, en]
+  team_size: 2
+
+preferences:
+  margin_floor_pct: 35
+  risk_appetite: "balanced"
+  competition_tolerance: "medium"
+  review_moat_max: 3000
+  product_style: [轻创新, 功能改良, 情绪价值]
+  scoring_weights:
+    demand: 0.25
+    competition: 0.15
+    margin: 0.20
+    capability_fit: 0.25
+    risk: 0.15
+
+learned:
+  - rule: "用户连续拒绝同款过多且差异化不足的 TikTok 品，后续降低同款密度高的候选权重。"
+    evidence:
+      - decisions/2026-07-11_reject-a.md
+      - decisions/2026-07-10_reject-b.md
+      - decisions/2026-07-09_reject-c.md
+    confirmed: false
+    created: "2026-07-11"
+    confirmed_at: null

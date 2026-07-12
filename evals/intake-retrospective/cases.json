@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.0",
+  "cases": [
+    {
+      "id": "IR01",
+      "title": "当时接受与后来失败分离",
+      "input": {
+        "seller_id": "private-pilot",
+        "candidate": "foldable-desk-lamp",
+        "decision_at_the_time": "accepted",
+        "later_outcome": "unprofitable",
+        "seller_quote": "当时觉得毛利够就做了，后来退货主要是转轴松。"
+      },
+      "expected": {
+        "decision_file_count": 1,
+        "user_decision": "accepted",
+        "outcome_status": "unprofitable",
+        "quote_preserved_verbatim": true,
+        "profile_auto_modified": false
+      }
+    },
+    {
+      "id": "IR02",
+      "title": "回忆数字不得成为事实",
+      "input": {
+        "seller_id": "private-pilot",
+        "candidate": "portable-blender",
+        "seller_quote": "我记得 CPC 大概 1.2 美元，认证可能花了五千。",
+        "original_report_available": false
+      },
+      "expected": {
+        "evidence_status": "recalled",
+        "facts_created_from_numbers": false,
+        "must_include": ["需人工核实", "原始报表"],
+        "forbidden_claims": ["实际 CPC 为 1.2 美元", "认证费用为 5000"]
+      }
+    },
+    {
+      "id": "IR03",
+      "title": "三候选拒绝只生成待确认规则",
+      "input": {
+        "seller_id": "private-pilot",
+        "decisions": [
+          {"candidate": "case-a", "decision": "rejected", "tags": ["同款过多", "差异化不足"]},
+          {"candidate": "case-b", "decision": "rejected", "tags": ["同款过多", "差异化不足"]},
+          {"candidate": "case-c", "decision": "rejected", "tags": ["同款过多", "差异化不足"]}
+        ]
+      },
+      "expected": {
+        "decision_file_count": 3,
+        "learned_candidate_allowed": true,
+        "learned_confirmed": false,
+        "evidence_file_count": 3,
+        "ranking_changes_before_confirmation": false,
+        "context_scope_preserved": true
+      }
+    },
+    {
+      "id": "IR04",
+      "title": "无 seller_id 或无画像先建档",
+      "input": {
+        "seller_id": null,
+        "candidate": "unknown-item",
+        "seller_quote": "这个当时没做。"
+      },
+      "expected": {
+        "status": "needs_input",
+        "decision_file_count": 0,
+        "recommendations_created": false,
+        "next_action": "confirm_seller_id_and_complete_intake"
+      }
+    }
+  ]
+}
