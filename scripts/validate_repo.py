@@ -33,6 +33,7 @@ REQUIRED_FILES = [
     "references/demo-data/demo-assumptions.md",
     "references/demo-data/example-profile-baseline.yaml",
     "references/demo-data/eval-tool-role-boundaries.json",
+    "references/demo-data/eval-learned-transfer-candidates.md",
     "references/freight.md",
     "references/platform-fees.md",
     "references/demo-script.md",
@@ -41,10 +42,13 @@ REQUIRED_FILES = [
     "references/private-deployment.md",
     "references/questions/recent-selection-retrospective.md",
     "config/hubu-rpa-allowlist.example.yaml",
+    "config/public-release-files.txt",
     "sellers/_example/profile.yaml",
     "sellers/_example/sop.md",
     "reports/_example/2026-07-06_tiktok-pet-products.md",
     "reports/_example/2026-07-06_tiktok-desk-accessories.md",
+    "evals/product-research/fixtures/reports/eval-content/2026-07-06_tiktok-cleaning-accessories.md",
+    "evals/product-research/fixtures/reports/eval-content/2026-07-06_tiktok-desk-accessories.md",
     "scripts/run_demo.py",
     "scripts/learned_rules.py",
     "scripts/propose_learned.py",
@@ -57,6 +61,8 @@ REQUIRED_FILES = [
     "scripts/verify_delivery.py",
     "scripts/install_project_skills.py",
     "scripts/build_release.py",
+    "scripts/export_product_research_evidence.py",
+    "scripts/public_release_safety.py",
     "evals/product-research/cases.json",
     "evals/product-research/rubric.json",
     "evals/product-research/schemas/final-result.schema.json",
@@ -70,6 +76,8 @@ REQUIRED_FILES = [
     "tests/test_video_demo.py",
     "tests/test_reset_demo.py",
     "tests/test_build_release.py",
+    "tests/test_eval_runner_security.py",
+    "tests/test_evidence_export.py",
     "THIRD_PARTY_NOTICES.md",
 ]
 
@@ -93,6 +101,7 @@ REQUIRED_SKILL_REFERENCES = {
         "references/schemas/candidate-batch.schema.json",
         "references/data-sources/1688-supply-validation.md",
         "PRODUCT_RESEARCH_EVAL=1",
+        "rule_effects",
     ],
     "skills/recommendation-review/SKILL.md": [
         "YYYY-MM-DD_product-slug.md",
@@ -244,6 +253,60 @@ def main() -> None:
     for case_id in ["DS01", "DS02", "DS03", "DS04", "DS05", "DS06", "DS07", "W02"]:
         if case_id not in {case["id"] for case in cases}:
             fail(f"product-research eval suite missing {case_id}")
+    cases_by_id = {case["id"]: case for case in cases}
+    nonempty_effect_cases = []
+    for case in cases:
+        expected_effects = case.get("expected", {}).get("rule_effects")
+        if not isinstance(expected_effects, dict) or not isinstance(
+            expected_effects.get("exact"), list
+        ):
+            fail(f"eval case {case['id']} missing expected.rule_effects.exact")
+        if expected_effects["exact"]:
+            nonempty_effect_cases.append(case["id"])
+        for seller in case.get("setup", {}).get("sellers", []):
+            if "confirmed" in seller:
+                fail(f"eval case {case['id']} still uses legacy confirmed boolean")
+    if nonempty_effect_cases != ["L02"]:
+        fail("only L02 may define non-empty expected rule effects")
+
+    l01_seller = cases_by_id["L01"]["setup"]["sellers"][0]
+    l02_seller = cases_by_id["L02"]["setup"]["sellers"][0]
+    if l01_seller.get("status") != "proposed" or l02_seller.get("status") != "active":
+        fail("L01/L02 must use proposed/active status setup")
+    if l01_seller.get("rule_id") != learned_rules.DEMO_RULE_ID:
+        fail("L01 must address the fixed learned rule_id")
+    if l02_seller.get("rule_id") != learned_rules.DEMO_RULE_ID:
+        fail("L02 must address the fixed learned rule_id")
+    l02_effects = cases_by_id["L02"]["expected"]["rule_effects"]["exact"]
+    if {item.get("candidate_id") for item in l02_effects} != {
+        "lr-a17",
+        "lr-b42",
+        "lr-c63",
+    }:
+        fail("L02 must target the three neutral transfer candidates exactly")
+    for item in l02_effects:
+        if set(item) != {"rule_id", "candidate_id", "dimension", "delta"}:
+            fail("L02 expected effects must not hard-code before/after scores")
+        if item["rule_id"] != learned_rules.DEMO_RULE_ID:
+            fail("L02 effect rule_id mismatch")
+        if item["dimension"] != "competition" or item["delta"] != -1:
+            fail("L02 effect must be competition -1")
+    if "eval-learned-transfer-candidates.md" not in cases_by_id["L02"]["prompt"]:
+        fail("L02 must use the neutral learned-transfer fixture")
+
+    oracle_fixture_paths = [
+        "references/demo-data/tiktok-candidates.md",
+        "references/demo-data/eval-learned-transfer-candidates.md",
+        "references/demo-data/eval-pressure-test.md",
+        "references/demo-data/eval-guardrail-candidates.md",
+        "references/demo-data/eval-platform-comparison.md",
+        "references/demo-data/eval-community-supply.md",
+    ]
+    for rel in oracle_fixture_paths:
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        for marker in ["intended_demo_role", "评测期望", "\n期望：", "演示使用方式"]:
+            if marker in text:
+                fail(f"eval input fixture leaks oracle marker {marker}: {rel}")
 
     candidate_schema = json.loads(
         (ROOT / "references/schemas/candidate-batch.schema.json").read_text(encoding="utf-8")
@@ -298,6 +361,26 @@ def main() -> None:
     retrospective_ids = {case.get("id") for case in retrospective_cases}
     if retrospective_ids != {"IR01", "IR02", "IR03", "IR04"}:
         fail("intake retrospective eval suite must contain IR01-IR04")
+    ir03 = next(case for case in retrospective_cases if case.get("id") == "IR03")
+    ir03_decisions = ir03.get("input", {}).get("decisions", [])
+    if len(ir03_decisions) != 3:
+        fail("IR03 must contain exactly three rejection records")
+    ir03_dates = {item.get("decided_at") for item in ir03_decisions}
+    if None in ir03_dates or len(ir03_dates) < 2:
+        fail("IR03 must span at least two historical event dates/sessions")
+    required_tags = {"same_product_density_high", "differentiation_space_low"}
+    for item in ir03_decisions:
+        if item.get("record_type") != "historical_retrospective":
+            fail("IR03 decisions must use historical_retrospective")
+        if item.get("platform") != "TikTok" or item.get("market") != "US":
+            fail("IR03 must preserve TikTok US context")
+        if not required_tags.issubset(set(item.get("tag_ids", []))):
+            fail("IR03 decisions must use explicit learned tag IDs")
+    ir03_rule = ir03.get("expected", {}).get("learned_rule", {})
+    if ir03_rule != {"rule_id": learned_rules.DEMO_RULE_ID, "status": "proposed"}:
+        fail("IR03 must expect the fixed proposed learned rule")
+    if ir03.get("expected", {}).get("independent_session_count", 0) < 2:
+        fail("IR03 must assert two independent sessions")
 
     demo_script = (ROOT / "references/demo-script.md").read_text(encoding="utf-8")
     mac_home = "/" + "Users/"
@@ -317,6 +400,10 @@ def main() -> None:
     )
     if "data_access" not in result_schema.get("properties", {}):
         fail("final-result schema missing data_access audit object")
+    if "rule_effects" not in result_schema.get("properties", {}):
+        fail("final-result schema missing rule_effects audit array")
+    if "rule_effects" not in result_schema.get("required", []):
+        fail("final-result schema must require rule_effects")
 
     rubric = json.loads((ROOT / "evals/product-research/rubric.json").read_text(encoding="utf-8"))
     if sum(item["points"] for item in rubric["dimensions"]) != 100:

@@ -37,20 +37,23 @@
     },
     {
       "id": "IR03",
-      "title": "三候选拒绝只生成待确认规则",
+      "title": "跨两个历史事件的三次拒绝只生成待确认规则",
       "input": {
         "seller_id": "private-pilot",
         "decisions": [
-          {"candidate": "case-a", "decision": "rejected", "tags": ["同款过多", "差异化不足"]},
-          {"candidate": "case-b", "decision": "rejected", "tags": ["同款过多", "差异化不足"]},
-          {"candidate": "case-c", "decision": "rejected", "tags": ["同款过多", "差异化不足"]}
+          {"candidate_id": "case-a", "decision": "rejected", "record_type": "historical_retrospective", "platform": "TikTok", "market": "US", "decided_at": "2026-05-01", "session_id": null, "source_report_id": null, "tag_ids": ["same_product_density_high", "differentiation_space_low"]},
+          {"candidate_id": "case-b", "decision": "rejected", "record_type": "historical_retrospective", "platform": "TikTok", "market": "US", "decided_at": "2026-05-01", "session_id": null, "source_report_id": null, "tag_ids": ["same_product_density_high", "differentiation_space_low"]},
+          {"candidate_id": "case-c", "decision": "rejected", "record_type": "historical_retrospective", "platform": "TikTok", "market": "US", "decided_at": "2026-06-15", "session_id": null, "source_report_id": null, "tag_ids": ["same_product_density_high", "differentiation_space_low"]}
         ]
       },
       "expected": {
         "decision_file_count": 3,
-        "learned_candidate_allowed": true,
-        "learned_confirmed": false,
+        "learned_rule": {
+          "rule_id": "learned_tiktok_same_density_diff_001",
+          "status": "proposed"
+        },
         "evidence_file_count": 3,
+        "independent_session_count": 2,
         "ranking_changes_before_confirmation": false,
         "context_scope_preserved": true
       }

@@ -52,20 +52,20 @@ learned:
     evidence:
       - decision_path: decisions/2026-07-11_reject-a.md
         decision_id: dec-eval-content-20260711-tt008
-        session_id: "report-date:reports/_example/2026-07-06_tiktok-desk-accessories.md|2026-07-11"
-        source_report_id: reports/_example/2026-07-06_tiktok-desk-accessories.md
+        session_id: "report-date:reports/eval-content/2026-07-06_tiktok-desk-accessories.md|2026-07-11"
+        source_report_id: reports/eval-content/2026-07-06_tiktok-desk-accessories.md
         candidate_id: tt-008
         decided_at: "2026-07-11"
       - decision_path: decisions/2026-07-10_reject-b.md
         decision_id: dec-eval-content-20260710-tt002
-        session_id: "report-date:reports/_example/2026-07-06_tiktok-pet-products.md|2026-07-10"
-        source_report_id: reports/_example/2026-07-06_tiktok-pet-products.md
+        session_id: "report-date:reports/eval-content/2026-07-06_tiktok-cleaning-accessories.md|2026-07-10"
+        source_report_id: reports/eval-content/2026-07-06_tiktok-cleaning-accessories.md
         candidate_id: tt-002
         decided_at: "2026-07-10"
       - decision_path: decisions/2026-07-09_reject-c.md
         decision_id: dec-eval-content-20260709-tt004
-        session_id: "report-date:reports/_example/2026-07-06_tiktok-desk-accessories.md|2026-07-09"
-        source_report_id: reports/_example/2026-07-06_tiktok-desk-accessories.md
+        session_id: "report-date:reports/eval-content/2026-07-06_tiktok-desk-accessories.md|2026-07-09"
+        source_report_id: reports/eval-content/2026-07-06_tiktok-desk-accessories.md
         candidate_id: tt-004
         decided_at: "2026-07-09"
     created: "2026-07-11"

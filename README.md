@@ -29,7 +29,7 @@
 python3 scripts/verify_delivery.py
 ```
 
-该命令依次运行：仓库结构校验、26-case 静态契约、72 个行为单测、数据接入状态检查、录屏双断言回归，以及一份写入忽略目录的临时合成报告。
+该命令依次运行：仓库结构校验、26-case 静态契约、128 个行为单测、数据接入状态检查、录屏双断言回归，以及一份写入忽略目录的临时合成报告。
 
 从 ZIP 解压到新目录后，先注册项目 Skill：
 
@@ -70,11 +70,11 @@ python3 scripts/run_video_demo.py
 ```bash
 python3 scripts/run_product_research_evals.py --list
 python3 scripts/run_product_research_evals.py --mode agent --case E00
-python3 scripts/run_product_research_evals.py --mode agent --case T01 --keep-workdir
+python3 scripts/run_product_research_evals.py --mode agent --case T01
 python3 scripts/run_product_research_evals.py --mode agent --suite core
 ```
 
-Agent 模式会在临时工作区启动新的 `codex exec`。评分器同时检查最终 JSON、生成的 Markdown 报告和文件 diff，避免 Agent 只在回复中自报合格。运行 Agent cases 会消耗模型时间/额度；默认只跑 static。
+Agent 模式会从已提交且命中输入白名单的文件构造临时工作区，不复制 case 金标、测试、真实 seller、原始报告或本地凭证，再启动新的 `codex exec`。评分器同时检查最终 JSON、生成的 Markdown 报告、文件 diff、结构化工具调用和只保留哈希/分类的命令审计，避免 Agent 只在回复中自报合格。原始事件流、命令、stderr 和完整 workspace 不落盘。运行 Agent cases 会消耗模型时间/额度；默认只跑 static。
 
 关键覆盖：
 
