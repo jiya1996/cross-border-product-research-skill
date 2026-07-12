@@ -3,6 +3,9 @@
 !.env.example
 *.local
 .DS_Store
+__pycache__/
+*.py[cod]
+.codex/
 
 # Black-box eval runs may contain model traces and temporary seller fixtures.
 evals/product-research/artifacts/

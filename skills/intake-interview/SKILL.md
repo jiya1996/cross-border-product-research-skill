@@ -72,7 +72,7 @@ description: 新卖家访谈建档技能。用于从文档/文字、对话或已
 
 写入时必须复制并填充 `references/schemas/` 中的模板结构，不得自由创建新顶层字段。无法确认的推断规则写入 `sop.md` 候选区，不进入 profile A/B/C 区块。
 
-入口 D 另外展示“决策日志确认表”。只有用户确认了候选品、当时决定、当时原话、依据状态与后来结果的分界后，才能调用 `recommendation-review` 写入 `sellers/{seller_id}/decisions/`。`intake-interview` 不得绕过该 Skill 自由发明决策格式，也不得因为一次历史复盘直接生成 confirmed learned 规则。
+入口 D 另外展示“决策日志确认表”。只有用户确认了候选品、当时决定、当时原话、依据状态与后来结果的分界后，才能调用 `recommendation-review` 写入 `sellers/{seller_id}/decisions/`。`intake-interview` 不得绕过该 Skill 自由发明决策格式，也不得因为一次历史复盘直接生成 `status: active` 的 learned 规则。
 
 ## 边界
 

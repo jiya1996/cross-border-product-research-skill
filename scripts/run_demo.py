@@ -10,12 +10,22 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import math
 import re
+import sys
 from pathlib import Path
 from typing import Optional
 
 
 ROOT = Path(__file__).resolve().parents[1]
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+import learned_rules  # noqa: E402
+from propose_learned import aggregate_candidate_paths  # noqa: E402
+
+
 DEFAULT_SELLER_ID = "_example"
 SAFE_SELLER_ID = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_-]{0,63}$")
 
@@ -51,6 +61,11 @@ def parse_args() -> argparse.Namespace:
         default="",
         help="Optional report filename label, e.g. before or after.",
     )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        help="Optional repository-relative report directory; defaults to reports/{seller_id}.",
+    )
     return parser.parse_args()
 
 
@@ -82,7 +97,10 @@ def parse_scalar(value: str):
     except ValueError:
         pass
     try:
-        return float(value)
+        number = float(value)
+        if not math.isfinite(number):
+            raise SystemExit("Profile numeric values must be finite; NaN/Inf are forbidden.")
+        return number
     except ValueError:
         return value
 
@@ -124,10 +142,17 @@ def load_profile_text(text: str) -> dict:
     return data
 
 
-def read_required_context(seller_id: str) -> dict:
+def read_required_context(seller_id: str, run_at: str | None = None) -> dict:
     """Read all mandatory files in the same order as the Skill contract."""
-    seller_root = ROOT / "sellers" / seller_id
-    profile_path = seller_root / "profile.yaml"
+    validate_seller_id(seller_id)
+    try:
+        context_paths = learned_rules.validate_seller_context(
+            ROOT, seller_id, require_decisions=False
+        )
+    except learned_rules.RuleValidationError as exc:
+        raise SystemExit(f"Invalid seller context: {exc}") from exc
+    seller_root = context_paths["seller_root"]
+    profile_path = context_paths["profile_path"]
     sop_path = seller_root / "sop.md"
     if not profile_path.is_file() or not sop_path.is_file():
         missing = []
@@ -137,12 +162,33 @@ def read_required_context(seller_id: str) -> dict:
             missing.append(str(sop_path.relative_to(ROOT)))
         raise SystemExit("Missing seller memory; run intake-interview first: " + ", ".join(missing))
 
+    try:
+        context_paths = learned_rules.validate_seller_context(ROOT, seller_id)
+    except learned_rules.RuleValidationError as exc:
+        raise SystemExit(f"Invalid seller context: {exc}") from exc
+    try:
+        sop_path = learned_rules.validate_contained_file(
+            seller_root, sop_path, "seller SOP"
+        )
+        decision_paths = learned_rules.safe_decision_paths(
+            context_paths["decisions_path"]
+        )
+    except learned_rules.RuleValidationError as exc:
+        raise SystemExit(f"Invalid seller memory path: {exc}") from exc
+
     # 1. profile, 2. SOP, 3. most recent ten decisions.
     profile_text = profile_path.read_text(encoding="utf-8")
     sop_text = sop_path.read_text(encoding="utf-8")
-    decision_dir = seller_root / "decisions"
-    recent_paths = sorted(decision_dir.glob("*.md"), reverse=True)[:10]
+    rules = learned_rules.load_rules(profile_text)
+    recent_paths = sorted(decision_paths, key=lambda path: path.name, reverse=True)[:10]
     recent_decisions = [(path, path.read_text(encoding="utf-8")) for path in recent_paths]
+    for rule in learned_rules.active_rules(rules, now=run_at):
+        try:
+            learned_rules.validate_rule_evidence_files(rule, seller_root, ROOT)
+        except learned_rules.RuleValidationError as exc:
+            raise SystemExit(
+                f"Active learned rule {rule['rule_id']} failed evidence validation: {exc}"
+            ) from exc
 
     # 4-11. Policy, checklists, data map/contract, tool roles and platform strategy.
     reference_paths = [
@@ -168,6 +214,7 @@ def read_required_context(seller_id: str) -> dict:
         "profile_path": profile_path,
         "profile_text": profile_text,
         "profile": load_profile_text(profile_text),
+        "learned_rules": rules,
         "sop_path": sop_path,
         "sop_text": sop_text,
         "recent_decisions": recent_decisions,
@@ -188,27 +235,30 @@ def load_candidates(path: Path) -> list[dict]:
     for line in table_lines[2:]:
         values = [cell.strip() for cell in line.strip("|").split("|")]
         if len(values) == len(header):
-            rows.append(dict(zip(header, values)))
+            row = dict(zip(header, values))
+            raw_tags = row.get("rule_tag_ids", "").strip()
+            if raw_tags.startswith("[") and raw_tags.endswith("]"):
+                raw_tags = raw_tags[1:-1]
+            row["rule_tag_ids"] = [
+                item.strip().strip('"').strip("'")
+                for item in re.split(r"[,，]", raw_tags)
+                if item.strip()
+            ]
+            rows.append(row)
     return rows
 
 
-def load_confirmed_rules(profile_text: str) -> list[str]:
-    rules = []
-    current_rule = None
-    for raw in profile_text.splitlines():
-        stripped = raw.strip()
-        if stripped.startswith("- rule:"):
-            current_rule = stripped.split(":", 1)[1].strip().strip('"')
-            continue
-        if current_rule and stripped == "confirmed: true":
-            rules.append(current_rule)
-            current_rule = None
-    return rules
-
-
 def parse_volume(text: str) -> Optional[tuple[float, float, float]]:
-    nums = [float(x) for x in re.findall(r"\d+(?:\.\d+)?", text or "")]
-    if len(nums) != 3:
+    match = re.fullmatch(
+        r"\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*[xX×]\s*"
+        r"([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*[xX×]\s*"
+        r"([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*",
+        text or "",
+    )
+    if match is None:
+        return None
+    nums = [float(value) for value in match.groups()]
+    if any(not math.isfinite(value) or value <= 0 for value in nums):
         return None
     return tuple(nums)  # type: ignore[return-value]
 
@@ -218,7 +268,20 @@ def parse_float(candidate: dict, field: str) -> Optional[float]:
         raw = candidate.get(field, "")
         if raw in {None, ""}:
             return None
-        return float(raw)
+        value = float(raw)
+        if not math.isfinite(value):
+            return None
+        strictly_positive = {
+            "target_price_usd",
+            "supply_price_cny",
+            "weight_g",
+            "moq",
+        }
+        if field in strictly_positive and value <= 0:
+            return None
+        if field not in strictly_positive and value < 0:
+            return None
+        return value
     except (TypeError, ValueError):
         return None
 
@@ -332,76 +395,130 @@ def risk_score(candidate: dict, is_filtered: bool) -> Optional[int]:
     flags = candidate.get("risk_flags", "").strip()
     if not flags:
         return None
-    if "待核实" in flags:
-        return 3
+    if any(
+        marker in flags.casefold()
+        for marker in ["待核实", "需核实", "待确认", "需确认", "unknown", "未知"]
+    ):
+        return None
     if any(word in flags for word in ["低客单", "兼容", "适配", "退货"]):
         return 3
     return 4
 
 
-def apply_confirmed_rules(
-    candidate: dict, scores: dict[str, Optional[int]], confirmed_rules: list[str]
-) -> list[str]:
-    applied = []
-    competition_text = candidate.get("competition_signal", "")
-    risk_text = candidate.get("risk_flags", "")
-    for rule in confirmed_rules:
-        if (
-            ("同款" in rule or "差异化" in rule)
-            and "同款" in competition_text
-            and any(word in competition_text for word in ["过多", "高", "极多", "中高"])
-            and scores.get("competition") is not None
-        ):
-            before = int(scores["competition"] or 0)
-            scores["competition"] = max(0, before - 1)
-            applied.append(f"同款/差异化降权 competition {before}->{scores['competition']}")
-        if (
-            "素材" in rule
-            and any(word in risk_text for word in ["差异化弱", "记忆点弱"])
-            and scores.get("capability_fit") is not None
-        ):
-            before = int(scores["capability_fit"] or 0)
-            scores["capability_fit"] = max(0, before - 1)
-            applied.append(f"素材记忆点降权 capability_fit {before}->{scores['capability_fit']}")
-    return applied
+def apply_structured_rules(
+    candidate: dict,
+    scores: dict[str, Optional[int]],
+    rules: list[dict],
+    run_at: str | None = None,
+) -> dict:
+    """Apply v2 rules from IDs and data fields only; summary prose is inert."""
+
+    result = learned_rules.apply_rules(
+        candidate,
+        scores,
+        rules,
+        platform="tiktok",
+        market="US",
+        category=str(candidate.get("category") or ""),
+        now=run_at,
+    )
+    scores.update(result["scores"])
+    return result
 
 
 def actual_weights(profile: dict) -> dict[str, float]:
-    raw = profile.get("preferences", {}).get("scoring_weights") or DEFAULT_WEIGHTS
-    weights = {key: float(raw.get(key, 0)) for key in DEFAULT_WEIGHTS}
+    raw = profile.get("preferences", {}).get("scoring_weights")
+    if raw is None:
+        raw = DEFAULT_WEIGHTS
+    if not isinstance(raw, dict) or any(key not in raw for key in DEFAULT_WEIGHTS):
+        raise SystemExit(
+            "profile.preferences.scoring_weights must provide every scoring dimension"
+        )
+    try:
+        weights = {key: float(raw[key]) for key in DEFAULT_WEIGHTS}
+    except (TypeError, ValueError) as exc:
+        raise SystemExit("profile.preferences.scoring_weights must be numeric") from exc
+    if any(not math.isfinite(value) or not 0 <= value <= 1 for value in weights.values()):
+        raise SystemExit(
+            "profile.preferences.scoring_weights must be finite values from 0 to 1"
+        )
     if abs(sum(weights.values()) - 1.0) > 0.001:
         raise SystemExit("profile.preferences.scoring_weights must sum to 1.0")
     return weights
+
+
+def profile_number(
+    value,
+    field: str,
+    *,
+    minimum: float,
+    maximum: float | None = None,
+) -> float | None:
+    if value is None:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as exc:
+        raise SystemExit(f"{field} must be numeric") from exc
+    if not math.isfinite(number) or number < minimum or (
+        maximum is not None and number > maximum
+    ):
+        upper = f" and <= {maximum}" if maximum is not None else ""
+        raise SystemExit(f"{field} must be finite and >= {minimum}{upper}")
+    return number
 
 
 def score_candidates(
     profile: dict,
     sop_text: str,
     candidates: list[dict],
-    confirmed_rules: list[str],
+    rules: list[dict],
+    run_at: str | None = None,
 ) -> tuple[list[dict], list[dict], list[dict], dict[str, float]]:
     weights = actual_weights(profile)
     scored = []
     filtered = []
     pending = []
-    margin_floor = profile.get("preferences", {}).get("margin_floor_pct")
-    capital_max = profile.get("constraints", {}).get("capital_per_sku_max")
+    margin_floor = profile_number(
+        profile.get("preferences", {}).get("margin_floor_pct"),
+        "profile.preferences.margin_floor_pct",
+        minimum=0,
+        maximum=100,
+    )
+    capital_max = profile_number(
+        profile.get("constraints", {}).get("capital_per_sku_max"),
+        "profile.constraints.capital_per_sku_max",
+        minimum=0,
+    )
+    profile_number(
+        profile.get("capabilities", {}).get("content_skill"),
+        "profile.capabilities.content_skill",
+        minimum=0,
+        maximum=5,
+    )
 
     for candidate in candidates:
         reasons = forbidden_reasons(candidate, profile, sop_text)
         margin, margin_pct, freight_route, freight_cny = known_cost_margin(candidate)
         moq = parse_float(candidate, "moq")
         supply_cny = parse_float(candidate, "supply_price_cny")
+        candidate_data_missing = [
+            field
+            for field in ("target_price_usd", "supply_price_cny", "weight_g", "moq")
+            if parse_float(candidate, field) is None
+        ]
+        if parse_volume(candidate.get("volume_cm", "")) is None:
+            candidate_data_missing.append("volume_cm")
         known_initial_cny = None
         if moq is not None and supply_cny is not None and freight_cny is not None:
             known_initial_cny = moq * (supply_cny + freight_cny)
-            if capital_max is not None and known_initial_cny > float(capital_max):
+            if capital_max is not None and known_initial_cny > capital_max:
                 reasons.append(
                     "已知采购+演示头程投入 "
                     f"{known_initial_cny:.0f} CNY 超过 profile.constraints.capital_per_sku_max="
                     f"{capital_max} CNY"
                 )
-        if margin_pct is not None and margin_floor is not None and margin_pct < float(margin_floor):
+        if margin_pct is not None and margin_floor is not None and margin_pct < margin_floor:
             reasons.append(
                 f"已知演示成本口径毛利 {margin_pct:.1f}% 低于 "
                 f"profile.preferences.margin_floor_pct={margin_floor}%"
@@ -416,9 +533,15 @@ def score_candidates(
             "risk": risk_score(candidate, is_filtered),
         }
         missing_dimensions = [key for key, value in scores.items() if value is None]
-        applied_rules = []
+        missing_dimensions.extend(
+            f"data.{field}" for field in candidate_data_missing
+        )
+        missing_dimensions = list(dict.fromkeys(missing_dimensions))
+        rule_result: dict = {"effects": [], "aggregates": [], "skipped": []}
         if not is_filtered and not missing_dimensions:
-            applied_rules = apply_confirmed_rules(candidate, scores, confirmed_rules)
+            rule_result = apply_structured_rules(candidate, scores, rules, run_at=run_at)
+        rule_effects = rule_result["effects"]
+        rule_aggregates = rule_result["aggregates"]
 
         total = None
         if not is_filtered and not missing_dimensions:
@@ -431,7 +554,17 @@ def score_candidates(
             "total": total,
             "freight_route": freight_route,
             "known_initial_cny": known_initial_cny,
-            "applied_profile_rules": "; ".join(applied_rules) if applied_rules else "-",
+            "rule_effects": rule_effects,
+            "rule_aggregates": rule_aggregates,
+            "rule_skips": rule_result["skipped"],
+            "applied_profile_rules": "; ".join(
+                f"{','.join(aggregate['rule_ids'])}: {aggregate['dimension']} "
+                f"aggregate_delta={aggregate['total_delta']} "
+                f"{aggregate['before']}->{aggregate['after']}"
+                for aggregate in rule_aggregates
+            )
+            if rule_aggregates
+            else "-",
             "filter_reason": "; ".join(dict.fromkeys(reasons)),
             "missing_dimensions": missing_dimensions,
         }
@@ -449,35 +582,54 @@ def score_candidates(
     return scored, filtered, pending, weights
 
 
-def decision_tags_text(text: str) -> list[str]:
-    match = re.search(r"归类标签:\s*\[(.*?)\]", text)
-    if not match:
-        return []
-    return [tag.strip() for tag in match.group(1).split(",")]
-
-
-def learned_candidates(recent_decisions: list[tuple[Path, str]]) -> list[str]:
-    tag_to_files: dict[str, list[str]] = {}
-    for path, text in recent_decisions:
-        if "用户决定: rejected" not in text:
-            continue
-        for tag in decision_tags_text(text):
-            tag_to_files.setdefault(tag, []).append(path.name)
-    rules = []
-    if len(tag_to_files.get("同款过多", [])) >= 3 and len(tag_to_files.get("差异化不足", [])) >= 3:
-        evidence = tag_to_files["同款过多"][:3]
-        rules.append(
-            "用户连续拒绝同款过多且差异化不足的 TikTok 品，后续应降低同款密度高且"
-            "内容记忆点弱的候选权重。 evidence: " + ", ".join(evidence)
-        )
-    return rules
-
-
 def report_filename(today: str, label: str) -> str:
     if not label:
         return f"{today}_demo-run.md"
     safe_label = re.sub(r"[^a-zA-Z0-9_-]+", "-", label.strip()).strip("-").lower()
     return f"{today}_demo-run-{safe_label}.md" if safe_label else f"{today}_demo-run.md"
+
+
+def report_output_dir(seller_id: str, requested: Path | None) -> Path:
+    seller_report_root = ROOT / "reports" / seller_id
+    if requested is None:
+        candidate = seller_report_root
+    else:
+        requested = Path(requested)
+        if requested.is_absolute():
+            raise SystemExit("--output-dir must be repository-relative.")
+        candidate = ROOT / requested
+    root_resolved = ROOT.resolve()
+    candidate_resolved = candidate.resolve()
+    try:
+        candidate_resolved.relative_to(root_resolved)
+    except ValueError as exc:
+        raise SystemExit("--output-dir must stay inside the repository.") from exc
+
+    allowed = candidate_resolved == seller_report_root.resolve()
+    is_eval_seller = seller_id == "_example" or seller_id.startswith("eval-")
+    eval_root = ROOT / "evals" / "product-research" / "artifacts"
+    if is_eval_seller:
+        try:
+            candidate_resolved.relative_to(eval_root.resolve())
+            allowed = True
+        except ValueError:
+            pass
+    if not allowed:
+        raise SystemExit(
+            f"--output-dir for seller {seller_id!r} must be reports/{seller_id}; "
+            "only synthetic/eval sellers may use evals/product-research/artifacts/."
+        )
+
+    current = candidate
+    while True:
+        if current.is_symlink():
+            raise SystemExit(f"--output-dir path must not contain symlinks: {current}")
+        if current.absolute() == ROOT.absolute():
+            break
+        if current.parent == current:
+            raise SystemExit("--output-dir parent chain does not reach the repository root.")
+        current = current.parent
+    return candidate
 
 
 def score_text(value: Optional[int]) -> str:
@@ -514,13 +666,72 @@ def write_report(
     filtered: list[dict],
     pending: list[dict],
     weights: dict[str, float],
+    run_at: str | None = None,
+    output_dir: Path | None = None,
 ) -> Path:
     today = dt.date.today().isoformat()
-    out_dir = ROOT / "reports" / seller_id
+    out_dir = report_output_dir(seller_id, output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / report_filename(today, label)
+    if out.is_symlink():
+        raise SystemExit(f"Refusing to overwrite symlinked report file: {out}")
     profile = context["profile"]
     decision_names = [path.name for path, _ in context["recent_decisions"]]
+    effective_at = run_at or dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+    rules = context.get("learned_rules") or learned_rules.load_rules(context["profile_text"])
+    active = learned_rules.active_rules(rules, now=effective_at)
+    successor_by_predecessor = {
+        rule["supersedes"]: rule
+        for rule in rules
+        if rule.get("supersedes")
+    }
+    inactive = []
+    for rule in rules:
+        status = learned_rules.effective_status(rule, now=effective_at)
+        if status == "active":
+            continue
+        if status == "proposed":
+            reason = "等待人工确认"
+        elif status == "revoked":
+            reason = f"{rule.get('revoke_reason')}; revoked_at={rule.get('revoked_at')}"
+        elif status == "expired":
+            reason = f"expires_at={rule.get('expires_at')}"
+        elif status == "superseded":
+            successor = successor_by_predecessor.get(rule["rule_id"])
+            reason = (
+                f"superseded_by={successor['rule_id']}"
+                if successor is not None
+                else "superseded_by=需人工核实"
+            )
+        else:
+            reason = "需人工核实"
+        if status == "superseded":
+            successor = successor_by_predecessor.get(rule["rule_id"])
+            audit_time = (
+                successor.get("confirmed_at") if successor is not None else None
+            )
+        else:
+            audit_time = None
+        inactive.append(
+            {
+                "rule_id": rule["rule_id"],
+                "status": status,
+                "summary": rule["summary"],
+                "scope": "/".join(
+                    [
+                        ",".join(rule["scope"]["platforms"]) or "*",
+                        ",".join(rule["scope"]["markets"]) or "*",
+                        ",".join(rule["scope"]["categories"]) or "*",
+                    ]
+                ),
+                "audit_time": audit_time
+                or rule.get("revoked_at")
+                or rule.get("expires_at")
+                or rule.get("confirmed_at")
+                or rule["created"],
+                "reason": reason,
+            }
+        )
 
     lines = [
         "# TikTok 画像感知选品 · 合成数据演示",
@@ -539,7 +750,9 @@ def write_report(
         f"- profile: `sellers/{seller_id}/profile.yaml`",
         f"- sop: `sellers/{seller_id}/sop.md`",
         f"- 最近决策（最多 10 条）: {decision_names or '无'}",
-        f"- confirmed learned 规则数: {len(load_confirmed_rules(context['profile_text']))}",
+        f"- learned 规则评估时点（UTC）: `{effective_at}`",
+        f"- active learned 规则数: {len(active)}",
+        f"- 停用/未生效 learned 规则数: {len(inactive)}",
         "",
         "## 数据来源、样本边界与缺口",
         "",
@@ -592,7 +805,7 @@ def write_report(
         )
 
     adjusted = [row for row in scored if row["applied_profile_rules"] != "-"]
-    lines.extend(["", "## 已应用 confirmed learned 规则的候选", ""])
+    lines.extend(["", "## 已应用 active learned 规则的候选", ""])
     if adjusted:
         lines.extend(
             [
@@ -605,7 +818,36 @@ def write_report(
                 f"| {row['product']} | {row['applied_profile_rules']} | {row['total']:.2f} |"
             )
     else:
-        lines.append("- 无。`confirmed: false` 的规则未参与过滤或打分。")
+        lines.append("- 无。本轮没有 active 规则命中；learned 不改变硬过滤，且非 active 不参与打分。")
+
+    skipped_rows = [
+        (row["product"], item["rule_id"], item["reason"])
+        for row in scored[:top_n]
+        for item in row["rule_skips"]
+    ]
+    lines.extend(["", "## active learned 未命中说明（本报告 Top 候选）", ""])
+    if skipped_rows:
+        lines.extend(["| product | rule_id | reason |", "|---|---|---|"])
+        for product, rule_id, reason in skipped_rows:
+            lines.append(f"| {product} | {rule_id} | {reason} |")
+    else:
+        lines.append("- 无 active 规则跳过记录。")
+
+    lines.extend(["", "## 已停用或未生效的 learned 规则", ""])
+    if inactive:
+        lines.extend(
+            [
+                "| rule_id | status | scope(platform/market/category) | audit_time | reason | summary |",
+                "|---|---|---|---|---|---|",
+            ]
+        )
+        for rule in inactive:
+            lines.append(
+                f"| {rule['rule_id']} | {rule['status']} | {rule['scope']} | "
+                f"{rule['audit_time']} | {rule['reason']} | {rule['summary']} |"
+            )
+    else:
+        lines.append("- 无。停用规则不会从记忆中消失；有记录时将在此显示。")
 
     lines.extend(["", "## 被过滤品及原因", "", "| product | reason |", "|---|---|"])
     if filtered:
@@ -622,12 +864,29 @@ def write_report(
     else:
         lines.append("- 本合成 fixture 的五维演示字段齐全；真实运行不得据此假设数据同样齐全。")
 
-    rules = learned_candidates(context["recent_decisions"])
-    lines.extend(["", "## profile-update 候选规则（不自动生效）", ""])
-    if rules:
-        lines.extend(f"- {rule}" for rule in rules)
+    lines.extend(["", "## profile-update 聚合结果", ""])
+    proposal = aggregate_candidate_paths(
+        [path for path, _ in context["recent_decisions"]], created=today
+    )
+    if proposal:
+        session_count = len({item["session_id"] for item in proposal["evidence"]})
+        try:
+            persisted = learned_rules.find_rule(rules, proposal["rule_id"])
+            persisted_status = learned_rules.effective_status(persisted, now=effective_at)
+        except KeyError:
+            persisted_status = "not_persisted"
+        lines.extend(
+            [
+                f"- rule_id: `{proposal['rule_id']}`",
+                f"- summary: {proposal['summary']}",
+                f"- condition_tag_ids: `{proposal['condition_tag_ids']}`",
+                f"- action: `{proposal['action']['dimension']} {proposal['action']['delta']:+d}`",
+                f"- evidence: {len(proposal['evidence'])} 条拒绝，{session_count} 个独立会话",
+                f"- profile 中当前状态: `{persisted_status}`；只有 `active` 参与评分。",
+            ]
+        )
     else:
-        lines.append("- 最近 10 条决策中暂无满足至少 3 条证据的候选规则。")
+        lines.append("- 暂无满足至少 3 条拒绝证据且跨至少 2 个独立会话的候选规则。")
 
     lines.extend(
         [
@@ -657,11 +916,12 @@ def main() -> None:
     if args.top_n < 1:
         raise SystemExit("--top-n must be >= 1")
 
-    context = read_required_context(args.seller_id)
-    confirmed_rules = load_confirmed_rules(context["profile_text"])
+    run_at = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+    context = read_required_context(args.seller_id, run_at=run_at)
+    rules = context["learned_rules"]
     candidates = load_candidates(ROOT / "references" / "demo-data" / "tiktok-candidates.md")
     scored, filtered, pending, weights = score_candidates(
-        context["profile"], context["sop_text"], candidates, confirmed_rules
+        context["profile"], context["sop_text"], candidates, rules, run_at=run_at
     )
     report = write_report(
         args.seller_id,
@@ -672,6 +932,8 @@ def main() -> None:
         filtered,
         pending,
         weights,
+        run_at=run_at,
+        output_dir=args.output_dir,
     )
 
     print(f"Generated {report.relative_to(ROOT)}")

@@ -6,11 +6,19 @@
 #   A 区块 = constraints   硬约束, 过滤阶段一票否决
 #   B 区块 = capabilities  能力, 打分阶段加权
 #   C 区块 = preferences   偏好, 打分与软排序
-#   learned 区块只能由 profile-update 写入;
-#   用户逐条确认后才把 confirmed 改为 true, 否则不参与打分。
+#   learned 区块只能由 profile-update 写入。
+#   status 映射:
+#     proposed   = 已提议、未生效
+#     active     = 已人工确认、唯一可参与打分/排序的状态
+#     revoked    = 已人工撤销、不生效
+#     expired    = 已过期、不生效
+#     superseded = 已被新版本取代、不生效
+#   硬过滤仍只由 constraints/SOP 决定。非 active 规则不得删除；
+#   报告应列出状态和未应用原因。
 # =====================================================================
 
 meta:
+  schema_version: "2.0"
   seller_id: ""
   created: ""            # YYYY-MM-DD
   updated: ""            # 每次写盘更新
@@ -45,11 +53,45 @@ preferences:
 learned: []
 # 示例:
 # learned:
-#   - rule: "推荐电商场景下素材可拍性低的品应降权"
+#   - rule_id: "learned_tiktok_same_density_diff_001"
+#     version: 1
+#     summary: "TikTok 同款密度高且差异化空间小的候选应降低竞争分"
+#     status: proposed
+#     scope:
+#       platforms: [tiktok]
+#       markets: [US]
+#       categories: []
+#     # condition_tag_ids 为合取；候选必须同时包含所有 ID 才能命中。
+#     condition_tag_ids:
+#       - same_product_density_high
+#       - differentiation_space_low
+#     action:
+#       dimension: competition
+#       delta: -1
 #     evidence:
-#       - decisions/2026-07-06_pet-hair-remover.md
-#       - decisions/2026-07-08_mini-projector.md
-#       - decisions/2026-07-11_led-strip.md
-#     confirmed: false
+#       - decision_path: decisions/2026-07-06_mini-desk-vacuum.md
+#         decision_id: dec-example-20260706-tt002
+#         session_id: "report-date:reports/_example/2026-07-06_tiktok-pet-products.md|2026-07-06"
+#         source_report_id: reports/_example/2026-07-06_tiktok-pet-products.md
+#         candidate_id: tt-002
+#         decided_at: "2026-07-06"  # 历史复盘有显式 session 且日期未知时可为 null
+#       - decision_path: decisions/2026-07-06_silicone-cable-organizer.md
+#         decision_id: dec-example-20260706-tt004
+#         session_id: "report-date:reports/_example/2026-07-06_tiktok-desk-accessories.md|2026-07-06"
+#         source_report_id: reports/_example/2026-07-06_tiktok-desk-accessories.md
+#         candidate_id: tt-004
+#         decided_at: "2026-07-06"
+#       - decision_path: decisions/2026-07-06_foldable-phone-stand.md
+#         decision_id: dec-example-20260706-tt008
+#         session_id: "report-date:reports/_example/2026-07-06_tiktok-desk-accessories.md|2026-07-06"
+#         source_report_id: reports/_example/2026-07-06_tiktok-desk-accessories.md
+#         candidate_id: tt-008
+#         decided_at: "2026-07-06"
 #     created: "2026-07-12"
+#     confirmed_by: null
 #     confirmed_at: null
+#     revoked_by: null
+#     revoked_at: null
+#     revoke_reason: null
+#     expires_at: null
+#     supersedes: null

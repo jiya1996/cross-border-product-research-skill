@@ -14,6 +14,8 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
+import learned_rules
+
 
 ROOT = Path(__file__).resolve().parents[1]
 EVAL_ROOT = ROOT / "evals" / "product-research"
@@ -122,7 +124,8 @@ def static_validate(cases: list[dict]) -> None:
     for needle in [
         "完整读取",
         "blocked_pending_data",
-        "confirmed: false",
+        "status: proposed",
+        "只有 `active`",
         "为什么适合你",
         "为什么不适合你",
         "忠实执行段",
@@ -215,13 +218,30 @@ def setup_sellers(workdir: Path, case: dict) -> list[str]:
             text = profile.read_text(encoding="utf-8")
             text = text.replace('seller_id: "eval-content"', f'seller_id: "{seller_id}"')
             text = text.replace('seller_id: "eval-conservative"', f'seller_id: "{seller_id}"')
-            if spec.get("confirmed") is True:
-                text = text.replace("confirmed: false", "confirmed: true")
-                text = text.replace('confirmed_at: null', 'confirmed_at: "2026-07-11"')
-            elif spec.get("confirmed") is False:
-                text = text.replace("confirmed: true", "confirmed: false")
-                text = text.replace('confirmed_at: "2026-07-11"', "confirmed_at: null")
             profile.write_text(text, encoding="utf-8")
+            if "confirmed" in spec:
+                rules = learned_rules.load_rules(profile)
+                rule_id = spec.get("rule_id", learned_rules.DEMO_RULE_ID)
+                try:
+                    rule = learned_rules.find_rule(rules, rule_id)
+                except KeyError as exc:
+                    raise SystemExit(
+                        f"Case {case['id']} fixture has no learned rule_id {rule_id}"
+                    ) from exc
+                if spec["confirmed"] is True:
+                    rule["status"] = "active"
+                    rule["confirmed_by"] = "eval-fixture"
+                    rule["confirmed_at"] = "2026-07-11T00:00:00+00:00"
+                elif spec["confirmed"] is False:
+                    rule["status"] = "proposed"
+                    rule["confirmed_by"] = None
+                    rule["confirmed_at"] = None
+                    rule["revoked_by"] = None
+                    rule["revoked_at"] = None
+                    rule["revoke_reason"] = None
+                else:
+                    raise SystemExit(f"Case {case['id']} confirmed must be true or false")
+                learned_rules.save_rules(profile, rules)
     return seller_ids
 
 

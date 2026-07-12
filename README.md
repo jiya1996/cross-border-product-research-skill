@@ -1,12 +1,14 @@
 # 跨境电商 AI 选品 Skill
 
-这是一个“卖家画像记忆 + 跨平台选品决策 + 可重复评测”的 Codex Skill 包。它不是另一个通用市场数据工具，而是放在市场数据与卖家经营系统之上的、可审计的卖家专属决策记忆层：保存每次接受、拒绝及其理由，并且只有经人工确认的规则才会影响下一轮过滤、评分和归因。
+这是一个“卖家画像记忆 + 跨平台选品决策 + 可重复评测”的 Codex Skill 包。它不是另一个通用市场数据工具，而是放在市场数据与卖家经营系统之上的、可审计的卖家专属决策记忆层：保存每次接受、拒绝及其理由。learned 规则使用 `proposed / active / revoked / expired / superseded` 状态机，**只有经过显式确认步骤变为 `active` 的规则**会影响下一轮打分、排序和归因；硬过滤仍只由 `constraints` 和 SOP 决定。
 
 它不把“销量高”直接当答案，而是按固定顺序执行：确认 `seller_id` → 读取 profile/SOP/最近决策 → 识别平台与数据角色 → 数据溯源 → 硬过滤 → 可复算评分 → 逐候选个性化归因 → 风险与最小验证。
 
 当前状态：**Skill、合成 demo、离线单测、黑盒评测 cases 和一键录屏轨迹均可运行；记忆闭环只在合成数据中可复现，真实卖家精灵/SIF/Sorftime/领星数据及真实经营效果尚未验证。**
 
 录屏开场定位、对外表述护栏和分层图见 `references/demo-opening-positioning.md`。不要把“跨工具决策记忆缺口”说成“所有工具都无状态”或“市场上无人做”。
+
+真人复盘和盲评 A/B 的执行包见 `references/human-validation-plan.md`；真实卖家的私有 Git 部署与审计边界见 `references/private-deployment.md`。
 
 本次交付的完成度、验证证据和剩余真实数据缺口见 `DELIVERY_STATUS.md`。
 
@@ -27,7 +29,7 @@
 python3 scripts/verify_delivery.py
 ```
 
-该命令依次运行：仓库结构校验、26-case 静态契约、8 个行为单测、数据接入状态检查和一份新的合成选品报告。
+该命令依次运行：仓库结构校验、26-case 静态契约、72 个行为单测、数据接入状态检查、录屏双断言回归，以及一份写入忽略目录的临时合成报告。
 
 从 ZIP 解压到新目录后，先注册项目 Skill：
 
@@ -50,14 +52,14 @@ python3 scripts/check_data_access.py
 python3 scripts/run_video_demo.py
 ```
 
-脚本使用独立虚构卖家 `video-demo`，自动完成：
+脚本每次创建一个从未复用的独立虚构卖家 `video-demo-<run-id>`，不清理或覆盖任何既有 seller 目录，并自动完成：
 
 1. `learned: []` 的干净首轮推荐；
-2. 从 3 条重复拒绝生成 `confirmed: false` 候选规则；
-3. 未确认重跑，证明排序不变；
-4. 人工确认规则；
+2. 从至少 3 条拒绝、且覆盖至少 2 个独立决策会话的证据生成 `status: proposed` 候选规则；
+3. proposed 状态重跑，证明排序不变；
+4. 用合成操作者身份模拟一次已获授权的确认，将规则改为 `status: active`；
 5. 再次重跑，证明命中候选降权和排序变化；
-6. 生成 `reports/video-demo/YYYY-MM-DD_video-full-trace.md`。
+6. 生成 `reports/video-demo-<run-id>/YYYY-MM-DD_video-full-trace.md`；以控制台打印的本次路径为准。
 
 详细镜头和话术见 `references/demo-script.md`。
 
@@ -79,7 +81,7 @@ Agent 模式会在临时工作区启动新的 `codex exec`。评分器同时检�
 - 无 seller_id/profile/SOP 必须停止；
 - 禁做类目、属性和超资金一票否决；
 - 缺事实不补中性分或费率；
-- unconfirmed learned 不参与，确认后才改变排序；
+- 非 `active` learned 不参与，只有完成显式确认迁移的 `active` 规则才可改变排序；`confirmed_by` 是自报审计字段，不是身份认证；
 - Amazon/TikTok 路由变形；
 - 强制策略的忠实执行、成本压力测试和排序反转；
 - Reddit 只作需求验证，1688 只作供给验证；
@@ -131,8 +133,9 @@ python3 scripts/reset_demo.py --yes    # 实际恢复 learned: []
 
 - MCP 只读，禁止上架、调价、广告、库存和 Listing 写操作；
 - 真实 URL、密钥、Cookie、Token 和认证头不入仓；
-- `.gitignore` 忽略真实 `sellers/*`、`reports/*` 和黑盒评测 artifacts；
+- `.gitignore` 忽略真实 `sellers/*`、`reports/*` 和黑盒评测 artifacts；因此本公开仓库不对真实卖家文件提供 Git 审计；
 - 公开仓库只保留 `_example` 与合成 fixtures；
+- 需要 profile/SOP/decisions 可 diff、可回滚时，必须按 `references/private-deployment.md` 将已批准的真实卖家目录纳入受限访问的私有 Git 仓库；
 - 事实数字只能来自带来源的 `references/` 或可复算公式，否则写“需人工核实”。
 
 生成公开安全的交付 ZIP：
@@ -141,7 +144,7 @@ python3 scripts/reset_demo.py --yes    # 实际恢复 learned: []
 python3 scripts/build_release.py
 ```
 
-构建脚本使用显式 allowlist，并验证 ZIP 中没有真实卖家、生成报告、评测轨迹、`.env` 或密钥文件。
+构建脚本只读取 Git index 中已暂存/已提交且命中公开 allowlist 的常规文件，拒绝符号链接，并拦截真实卖家目录、生成报告、评测轨迹、`.env`、机器绝对路径和常见私钥头。该扫描不是通用 secret detector；发布前仍须人工复核 `RELEASE_MANIFEST.json` 和 staged diff。
 
 ## 真实使用前仍需完成
 
@@ -151,3 +154,4 @@ python3 scripts/build_release.py
 4. 录入合作方真实运费、平台费、广告/退货口径；
 5. 用一个真实在售品跑模式 B，和经营数据核对一笔隐性成本。
 6. 用 `references/questions/recent-selection-retrospective.md` 回放一位卖家最近一次真实选品，区分“当时决定”与“后来结果”。
+7. 按 `references/human-validation-plan.md` 同时完成真人复盘与通用排序/画像排序盲评 A/B。

@@ -7,6 +7,8 @@ import json
 import sys
 from pathlib import Path
 
+import learned_rules
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -35,14 +37,19 @@ REQUIRED_FILES = [
     "references/platform-fees.md",
     "references/demo-script.md",
     "references/demo-opening-positioning.md",
+    "references/human-validation-plan.md",
+    "references/private-deployment.md",
     "references/questions/recent-selection-retrospective.md",
     "config/hubu-rpa-allowlist.example.yaml",
     "sellers/_example/profile.yaml",
     "sellers/_example/sop.md",
     "reports/_example/2026-07-06_tiktok-pet-products.md",
+    "reports/_example/2026-07-06_tiktok-desk-accessories.md",
     "scripts/run_demo.py",
+    "scripts/learned_rules.py",
     "scripts/propose_learned.py",
     "scripts/confirm_learned.py",
+    "scripts/revoke_learned.py",
     "scripts/check_data_access.py",
     "scripts/reset_demo.py",
     "scripts/run_product_research_evals.py",
@@ -57,6 +64,12 @@ REQUIRED_FILES = [
     "evals/intake-retrospective/cases.json",
     "evals/intake-retrospective/README.md",
     "tests/test_product_research_demo.py",
+    "tests/test_learned_rules.py",
+    "tests/test_learned_cli.py",
+    "tests/test_eval_setup.py",
+    "tests/test_video_demo.py",
+    "tests/test_reset_demo.py",
+    "tests/test_build_release.py",
     "THIRD_PARTY_NOTICES.md",
 ]
 
@@ -87,7 +100,7 @@ REQUIRED_SKILL_REFERENCES = {
         "后来结果状态",
         "recalled",
     ],
-    "skills/profile-update/SKILL.md": ["confirmed_at: YYYY-MM-DD"],
+    "skills/profile-update/SKILL.md": ["status: proposed", "status: active", "rule_id"],
 }
 
 
@@ -110,52 +123,29 @@ def shared_rejection_count(tag: str) -> int:
     return count
 
 
-def decision_tags(path: Path) -> list[str]:
-    text = path.read_text(encoding="utf-8")
-    for line in text.splitlines():
-        if line.startswith("- 归类标签:"):
-            raw = line.split(":", 1)[1].strip()
-            if raw.startswith("[") and raw.endswith("]"):
-                return [tag.strip() for tag in raw[1:-1].split(",")]
-    return []
-
-
 def example_learned_rules() -> list[dict]:
-    rules = []
-    current = None
-    text = (ROOT / "sellers/_example/profile.yaml").read_text(encoding="utf-8")
-    for raw in text.splitlines():
-        stripped = raw.strip()
-        if stripped.startswith("- rule:"):
-            if current:
-                rules.append(current)
-            current = {"rule": stripped.split(":", 1)[1].strip().strip('"'), "evidence": []}
-            continue
-        if current and stripped.startswith("- decisions/"):
-            current["evidence"].append(stripped[2:])
-    if current:
-        rules.append(current)
-    return rules
-
-
-def keywords_for_rule(rule: str) -> list[str]:
-    candidates = ["同款过多", "差异化不足", "素材记忆点弱", "易损", "包装风险", "物流属性待核实"]
-    return [keyword for keyword in candidates if keyword in rule]
+    return learned_rules.load_rules(ROOT / "sellers/_example/profile.yaml")
 
 
 def validate_learned_evidence() -> None:
     decision_root = ROOT / "sellers/_example"
     for learned in example_learned_rules():
         if not learned["evidence"]:
-            fail(f"learned rule has no evidence: {learned['rule']}")
-        keywords = keywords_for_rule(learned["rule"])
-        for rel in learned["evidence"]:
+            fail(f"learned rule has no evidence: {learned['rule_id']}")
+        sessions = set()
+        for evidence in learned["evidence"]:
+            rel = evidence["decision_path"]
             path = decision_root / rel
             if not path.is_file():
                 fail(f"learned evidence missing: sellers/_example/{rel}")
-            tags = decision_tags(path)
-            if keywords and not any(keyword in tags for keyword in keywords):
+            decision = learned_rules.parse_decision(path)
+            if not set(learned["condition_tag_ids"]).issubset(
+                decision["explicit_tag_ids"]
+            ):
                 fail(f"learned evidence tags do not match rule: sellers/_example/{rel}")
+            sessions.add(learned_rules.independent_session_key(decision))
+        if len(learned["evidence"]) < 3 or len(sessions) < 2:
+            fail(f"learned rule lacks 3 evidence / 2 sessions: {learned['rule_id']}")
 
 
 def main() -> None:
@@ -173,7 +163,15 @@ def main() -> None:
             fail(f"root duplicate should be removed: {duplicate}")
 
     gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
-    for needle in ["sellers/*", "!sellers/_example/**", "reports/*", "!reports/_example/**"]:
+    for needle in [
+        "sellers/*",
+        "!sellers/_example/**",
+        "reports/*",
+        "!reports/_example/**",
+        "__pycache__/",
+        "*.py[cod]",
+        ".codex/",
+    ]:
         if needle not in gitignore:
             fail(f".gitignore missing {needle}")
 
@@ -302,6 +300,10 @@ def main() -> None:
         fail("intake retrospective eval suite must contain IR01-IR04")
 
     demo_script = (ROOT / "references/demo-script.md").read_text(encoding="utf-8")
+    mac_home = "/" + "Users/"
+    windows_home = "C:" + "\\Users\\"
+    if mac_home in demo_script or windows_home in demo_script:
+        fail("references/demo-script.md must not contain a machine-specific absolute path")
     for needle in ["demo-opening-positioning.md", "合成闭环", "虎步", "历史回测"]:
         if needle not in demo_script:
             fail(f"references/demo-script.md missing {needle}")
@@ -321,14 +323,35 @@ def main() -> None:
         fail("product-research rubric must sum to 100")
 
     propose_script = (ROOT / "scripts/propose_learned.py").read_text(encoding="utf-8")
-    for needle in ["No learned candidate found", "同款过多", "差异化不足", "confirmed: false"]:
+    for needle in [
+        "No learned candidate found",
+        "same_product_density_high",
+        "differentiation_space_low",
+        "aggregate_demo_rule",
+    ]:
         if needle not in propose_script:
             fail(f"scripts/propose_learned.py missing {needle}")
 
     confirm_script = (ROOT / "scripts/confirm_learned.py").read_text(encoding="utf-8")
-    for needle in ["confirmed_at", "Missing evidence file", "updated"]:
+    for needle in [
+        "--rule-id",
+        "--confirmed-by",
+        "confirmed_at",
+        "validate_rule_evidence_files",
+        '"active"',
+    ]:
         if needle not in confirm_script:
             fail(f"scripts/confirm_learned.py missing {needle}")
+
+    learned_kernel = (ROOT / "scripts/learned_rules.py").read_text(encoding="utf-8")
+    for needle in ["Missing evidence file", "report_candidate_ids", "explicit_tag_ids"]:
+        if needle not in learned_kernel:
+            fail(f"scripts/learned_rules.py missing {needle}")
+
+    revoke_script = (ROOT / "scripts/revoke_learned.py").read_text(encoding="utf-8")
+    for needle in ["--rule-id", "--revoked-by", "--reason", '"revoked"']:
+        if needle not in revoke_script:
+            fail(f"scripts/revoke_learned.py missing {needle}")
 
     print("OK: repository structure and offline eval package are delivery-ready")
 

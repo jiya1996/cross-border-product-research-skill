@@ -1,4 +1,5 @@
 meta:
+  schema_version: "2.0"
   seller_id: "eval-content"
   created: "2026-07-11"
   updated: "2026-07-11"
@@ -36,11 +37,42 @@ preferences:
     risk: 0.15
 
 learned:
-  - rule: "用户连续拒绝同款过多且差异化不足的 TikTok 品，后续降低同款密度高的候选权重。"
+  - rule_id: "learned_tiktok_same_density_diff_001"
+    version: 1
+    summary: "TikTok 同款密度高且差异化空间小的候选应降低竞争分"
+    status: proposed
+    scope:
+      platforms: [tiktok]
+      markets: [US]
+      categories: []
+    condition_tag_ids: [same_product_density_high, differentiation_space_low]
+    action:
+      dimension: competition
+      delta: -1
     evidence:
-      - decisions/2026-07-11_reject-a.md
-      - decisions/2026-07-10_reject-b.md
-      - decisions/2026-07-09_reject-c.md
-    confirmed: false
+      - decision_path: decisions/2026-07-11_reject-a.md
+        decision_id: dec-eval-content-20260711-tt008
+        session_id: "report-date:reports/_example/2026-07-06_tiktok-desk-accessories.md|2026-07-11"
+        source_report_id: reports/_example/2026-07-06_tiktok-desk-accessories.md
+        candidate_id: tt-008
+        decided_at: "2026-07-11"
+      - decision_path: decisions/2026-07-10_reject-b.md
+        decision_id: dec-eval-content-20260710-tt002
+        session_id: "report-date:reports/_example/2026-07-06_tiktok-pet-products.md|2026-07-10"
+        source_report_id: reports/_example/2026-07-06_tiktok-pet-products.md
+        candidate_id: tt-002
+        decided_at: "2026-07-10"
+      - decision_path: decisions/2026-07-09_reject-c.md
+        decision_id: dec-eval-content-20260709-tt004
+        session_id: "report-date:reports/_example/2026-07-06_tiktok-desk-accessories.md|2026-07-09"
+        source_report_id: reports/_example/2026-07-06_tiktok-desk-accessories.md
+        candidate_id: tt-004
+        decided_at: "2026-07-09"
     created: "2026-07-11"
+    confirmed_by: null
     confirmed_at: null
+    revoked_by: null
+    revoked_at: null
+    revoke_reason: null
+    expires_at: null
+    supersedes: null

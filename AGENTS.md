@@ -21,9 +21,9 @@
 - 建档必须以 `references/schemas/profile-template.yaml` 和 `references/schemas/sop-template.md` 为准；画像字段不得自由发挥。
 - 任何选品任务都必须读取 `references/knowledge-policy.md`，区分事实型知识、经验型知识、用户画像知识和推断型知识。
 - 选品任务必须先识别平台/来源：Amazon、SHEIN、TikTok、DTC/SEO、Reddit、1688 或 unknown；再读取 `references/platforms/` 下对应策略文件。
-- 选品分析必须遵循"过滤 -> 打分 -> 归因"。过滤使用 `constraints` 一票否决；打分使用 `references/checklists/scoring-rubric.md`、`capabilities`、`preferences` 和已确认的 `learned` 规则；归因必须引用画像或 SOP 的具体字段。
+- 选品分析必须遵循"过滤 -> 打分 -> 归因"。过滤使用 `constraints` 一票否决；打分使用 `references/checklists/scoring-rubric.md`、`capabilities`、`preferences` 和状态为 `active` 的 `learned` 规则；归因必须引用画像或 SOP 的具体字段。
 - 用户反馈推荐结果时，必须使用 `skills/recommendation-review` 将接受、拒绝或观察记录写入对应卖家的 `decisions/` 目录。
-- 画像自更新只能由 `skills/profile-update` 基于决策日志生成候选规则；未人工确认的 `learned.confirmed: false` 规则不得参与推荐打分。
+- 画像自更新只能由 `skills/profile-update` 基于决策日志生成候选规则；`learned.status` 的唯一可执行状态是 `active`。`proposed`、`revoked`、`expired`、`superseded` 均不得参与推荐打分。
 
 ## 知识库纪律
 
@@ -45,7 +45,7 @@
 
 - MCP 仅用于只读数据查询和分析；禁止调用任何平台写操作，包括但不限于上架、调价、改广告、改库存、改 Listing。
 - 密钥、令牌、真实 MCP 地址等敏感配置只能来自环境变量或本地用户配置，禁止写入仓库。
-- 不要提交 `.env`、本地密钥文件、平台后台导出的敏感原始数据。
+- 不要提交 `.env`、项目级 `.codex/config.toml`、本地密钥文件、平台后台导出的敏感原始数据。
 - 当前 GitHub 仓库如保持公开，真实 `sellers/` 和 `reports/` 数据不得提交；只允许提交 `.gitkeep` 和 `_example/` 虚构演示数据。
 - 事实性数字只能引用 `references/` 内的清单或公式；没有覆盖时写"需人工核实"。
 - 不引入数据库、向量库、embedding 服务或外部持久化系统，除非用户后续明确要求。
