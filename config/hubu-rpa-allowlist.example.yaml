@@ -1,0 +1,136 @@
+# 示例文件：不得填入或提交真实 AppID、AppSecret、AppToken、RPA ID 或店铺 ID。
+# 真实白名单应保存在仓库外的本地安全配置中。
+schema_version: "1.0"
+
+policy:
+  mode: deny_by_default
+  enabled: false
+  allow_agent_to_modify: false
+  allow_agent_supplied_rpa_id: false
+  allow_agent_supplied_parameters: false
+  allow_all_stores: false
+  allow_cross_seller_batch: false
+  allow_recurring_plan_creation: false
+  allow_plan_mutation: false
+  allowed_business_effects:
+    - report_download
+    - existing_page_data_export
+    - task_status_read
+    - task_result_read
+  denied_business_effects:
+    - automatic_withdrawal
+    - payment
+    - advertising_create_or_update
+    - listing_create_or_update
+    - product_upload
+    - promotion_create_or_update
+    - inventory_update
+    - purchase_update
+    - order_update
+    - shipment_or_fulfillment
+    - review_request
+    - buyer_or_creator_message
+    - arbitrary_ui_action
+
+# 这里只记录环境变量名，不记录值。
+credentials:
+  app_id_env: HUBU_RPA_APP_ID
+  app_secret_env: HUBU_RPA_APP_SECRET
+  app_token_env: HUBU_RPA_APP_TOKEN
+  values_must_not_be_committed: true
+
+seller_scopes:
+  _example_seller:
+    enabled: false
+    seller_id: _example_seller
+    account_scope_id: example_store_alias
+    allowed_platforms:
+      - amazon
+    # 空数组表示拒绝全部站点；在仓库外的真实配置中显式填写。
+    allowed_sites: []
+    allowed_rpa_aliases:
+      - amazon_date_range_transaction_csv
+
+rpa_allowlist:
+  amazon_date_range_transaction_csv:
+    enabled: false
+    # 审核完成前保持 null；不要在示例或公开仓库填真实 ID。
+    rpa_id: null
+    audited_version: null
+    display_name: Amazon date range transaction CSV download
+    original_provider: amazon_seller_central
+    collector: hubu_rpa
+    collector_role: collection_only
+    # 被搬运事实继承原报表角色；不要把 collection_only 写进最终 Candidate Batch。
+    output_source_role: seller_first_party_data
+    business_effect: report_download
+    allowed_platforms:
+      - amazon
+    # 空数组表示拒绝全部站点。
+    allowed_sites: []
+    allowed_output_media_types:
+      - text/csv
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+    # 由人工从该 RPA 的官方详情逐项抄入真实本地配置；未列出的参数一律拒绝。
+    allowed_parameters: {}
+    reject_unlisted_parameters: true
+    reject_all_store_scope: true
+    write_operations: []
+    official_reference: https://support.huburpa.com/cc8e/4bc8/9fde
+    audit:
+      reviewed_at: null
+      reviewed_by: null
+      ui_actions_verified_read_only: false
+      output_schema_verified: false
+      write_effect_negative_test_passed: false
+      notes: "Disabled template only; fill in a private local copy after human review."
+
+output:
+  private_root_template: "reports/{seller_id}/raw/{batch_id}/"
+  quarantine_subdirectory: quarantine
+  verified_subdirectory: verified
+  require_sha256: true
+  require_manifest: true
+  reject_symlinks: true
+  reject_path_traversal: true
+  commit_raw_files: false
+  manifest_required_fields:
+    - schema_version
+    - batch_id
+    - seller_id
+    - account_scope_id
+    - platform
+    - market
+    - original_provider
+    - collector
+    - source_role
+    - rpa_alias
+    - rpa_id
+    - rpa_version
+    - plan_id
+    - task_id
+    - task_record_id
+    - requested_at
+    - collected_at
+    - data_window
+    - file_name
+    - content_type
+    - size_bytes
+    - sha256
+    - row_count
+    - column_names
+    - source_locator
+    - read_only
+    - write_operations_invoked
+    - status
+
+validation:
+  require_exact_seller_id_match: true
+  require_exact_account_scope_match: true
+  require_exact_site_match: true
+  require_exact_rpa_alias_match: true
+  require_read_only_true: true
+  require_empty_write_operations_invoked: true
+  treat_collection_failure_as_zero: false
+  verify_hash_before_import: true
+  live_smoke_test_required_before_enable: true

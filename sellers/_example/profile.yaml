@@ -1,0 +1,38 @@
+meta:
+  seller_id: "_example"
+  created: "2026-07-06"
+  updated: "2026-07-06"
+  intake_source: "interview"
+
+constraints:
+  target_marketplaces: [tiktok-us, amazon-us]
+  target_countries: [US]
+  capital_per_sku_max: 30000
+  capital_currency: "CNY"
+  cash_cycle_tolerance_days: 45
+  forbidden_categories: [食品, 医疗器械, 儿童安全用品]
+  forbidden_attributes: [液体, 粉末, 刀具, 强磁, 侵权图案, 大件易碎]
+  logistics_modes: [FBA, 全托管, 轻小件直发]
+
+capabilities:
+  supply_chain: "1688采购"
+  ad_skill: 3
+  content_skill: 4
+  compliance_experience: [FCC]
+  languages: [zh, en]
+  team_size: 2
+
+preferences:
+  margin_floor_pct: 35
+  risk_appetite: "balanced"
+  competition_tolerance: "medium"
+  review_moat_max: 3000
+  product_style: [轻创新, 情绪价值, 礼品, 功能改良]
+  scoring_weights:
+    demand: 0.25
+    competition: 0.18
+    margin: 0.20
+    capability_fit: 0.22
+    risk: 0.15
+
+learned: []

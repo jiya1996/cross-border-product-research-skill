@@ -1,0 +1,38 @@
+meta:
+  seller_id: "eval-conservative"
+  created: "2026-07-11"
+  updated: "2026-07-11"
+  intake_source: "synthetic_eval"
+
+constraints:
+  target_marketplaces: [tiktok-us, amazon-us]
+  target_countries: [US]
+  capital_per_sku_max: 8000
+  capital_currency: "CNY"
+  cash_cycle_tolerance_days: 30
+  forbidden_categories: [宠物用品, 儿童安全用品, 食品]
+  forbidden_attributes: [带电, 易碎, 强磁, 液体, 粉末]
+  logistics_modes: [轻小件直发]
+
+capabilities:
+  supply_chain: "1688代发"
+  ad_skill: 1
+  content_skill: 1
+  compliance_experience: []
+  languages: [zh]
+  team_size: 1
+
+preferences:
+  margin_floor_pct: 45
+  risk_appetite: "conservative"
+  competition_tolerance: "low"
+  review_moat_max: 300
+  product_style: [标准普货, 低售后]
+  scoring_weights:
+    demand: 0.15
+    competition: 0.20
+    margin: 0.20
+    capability_fit: 0.15
+    risk: 0.30
+
+learned: []

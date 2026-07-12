@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Product research evaluation result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "seller_id",
+    "platform_adapter",
+    "report_path",
+    "inputs_read",
+    "data_access",
+    "recommended",
+    "filtered",
+    "blocked_pending_data",
+    "manual_verification",
+    "notes"
+  ],
+  "properties": {
+    "status": {
+      "enum": ["completed", "needs_input", "redirected_intake", "blocked_missing_data"]
+    },
+    "seller_id": {"type": ["string", "null"]},
+    "platform_adapter": {
+      "enum": ["amazon", "shein", "tiktok", "dtc-seo", "reddit", "1688", "unknown"]
+    },
+    "report_path": {"type": ["string", "null"]},
+    "inputs_read": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "sop", "decisions", "policy", "platform_strategy"],
+      "properties": {
+        "profile": {"type": ["string", "null"]},
+        "sop": {"type": ["string", "null"]},
+        "decisions": {
+          "type": "array",
+          "maxItems": 10,
+          "items": {"type": "string"}
+        },
+        "policy": {"type": ["string", "null"]},
+        "platform_strategy": {"type": ["string", "null"]}
+      }
+    },
+    "data_access": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "sources_used", "collectors_used", "transformations_used", "denied_operations"],
+      "properties": {
+        "mode": {
+          "enum": ["live_mcp", "verified_import", "browser_assisted", "synthetic_demo", "none"]
+        },
+        "sources_used": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["provider", "provider_variant", "source_role", "read_operations"],
+            "properties": {
+              "provider": {"type": "string", "minLength": 1},
+              "provider_variant": {"type": ["string", "null"]},
+              "source_role": {
+                "enum": [
+                  "direct_market_data",
+                  "seller_first_party_data",
+                  "official_reference",
+                  "experience_reference",
+                  "discovery_only",
+                  "capability_context",
+                  "transformation_only",
+                  "collection_only"
+                ]
+              },
+              "read_operations": {
+                "type": "array",
+                "items": {"type": "string", "minLength": 1}
+              }
+            }
+          }
+        },
+        "collectors_used": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "transformations_used": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "denied_operations": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "recommended": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["candidate_id", "rank", "scores", "total_score", "fit_refs", "misfit_refs"],
+        "properties": {
+          "candidate_id": {"type": "string"},
+          "rank": {"type": "integer", "minimum": 1},
+          "scores": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["demand", "competition", "margin", "capability_fit", "risk"],
+            "properties": {
+              "demand": {"type": ["number", "null"]},
+              "competition": {"type": ["number", "null"]},
+              "margin": {"type": ["number", "null"]},
+              "capability_fit": {"type": ["number", "null"]},
+              "risk": {"type": ["number", "null"]}
+            }
+          },
+          "total_score": {"type": ["number", "null"]},
+          "fit_refs": {"type": "array", "items": {"type": "string"}},
+          "misfit_refs": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "filtered": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["candidate_id", "reason", "profile_refs"],
+        "properties": {
+          "candidate_id": {"type": "string"},
+          "reason": {"type": "string"},
+          "profile_refs": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "blocked_pending_data": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["candidate_id", "missing_fields"],
+        "properties": {
+          "candidate_id": {"type": "string"},
+          "missing_fields": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "manual_verification": {"type": "array", "items": {"type": "string"}},
+    "notes": {"type": "array", "items": {"type": "string"}}
+  }
+}

@@ -1,0 +1,418 @@
+{
+  "schema_version": "1.1",
+  "batch_id": "eval-tool-role-boundaries-20260712",
+  "seller_id": "eval-content",
+  "platform": "amazon",
+  "market": "US",
+  "collected_at": "2026-07-12T00:00:00Z",
+  "mode": "synthetic_demo",
+  "sources": [
+    {
+      "source_id": "ss-main",
+      "provider": "sellersprite",
+      "provider_variant": "mcp_research",
+      "tool_name": "synthetic_product_market_keyword_bundle",
+      "source_type": "synthetic",
+      "locator": "synthetic://amazon-us/reusable-pet-hair-roller",
+      "collected_at": "2026-07-12T00:00:00Z",
+      "scope": "Synthetic Amazon US product, market, keyword, concentration and CPC evidence",
+      "synthetic": true,
+      "source_role": "direct_market_data",
+      "allowed_dimensions": ["demand", "competition", "risk"],
+      "read_only": true,
+      "measurement_kind": "estimated",
+      "data_window": "synthetic trailing 30 days",
+      "metric_definition": "All values are fictional provider-shaped evaluation data"
+    },
+    {
+      "source_id": "sif-main",
+      "provider": "sif",
+      "provider_variant": "mcp_analysis",
+      "tool_name": "synthetic_traffic_and_ads_bundle",
+      "source_type": "synthetic",
+      "locator": "synthetic://amazon-us/reusable-pet-hair-roller/traffic",
+      "collected_at": "2026-07-12T00:00:00Z",
+      "scope": "Synthetic Amazon US traffic structure and advertising dependency evidence",
+      "synthetic": true,
+      "source_role": "direct_market_data",
+      "allowed_dimensions": ["competition", "risk"],
+      "read_only": true,
+      "measurement_kind": "estimated",
+      "data_window": "synthetic trailing 30 days",
+      "metric_definition": "Traffic shares are fictional and do not prove total market demand"
+    },
+    {
+      "source_id": "amazon-main",
+      "provider": "synthetic_amazon_market",
+      "tool_name": "fixture_market_snapshot",
+      "source_type": "synthetic",
+      "locator": "synthetic://amazon-us/home-cleaning",
+      "collected_at": "2026-07-12T00:00:00Z",
+      "scope": "Synthetic Amazon US demand and competition fixture",
+      "synthetic": true,
+      "source_role": "direct_market_data",
+      "allowed_dimensions": ["demand", "competition", "risk"],
+      "read_only": true,
+      "measurement_kind": "estimated",
+      "data_window": "synthetic trailing 30 days",
+      "metric_definition": "Fictional offline evaluation values"
+    },
+    {
+      "source_id": "cost-main",
+      "provider": "synthetic_cost_fixture",
+      "tool_name": "fixture_known_cost_formula",
+      "source_type": "synthetic",
+      "locator": "references/demo-data/eval-tool-role-boundaries.json#cost-main",
+      "collected_at": "2026-07-12T00:00:00Z",
+      "scope": "Synthetic known-cost margin and first-batch capital",
+      "synthetic": true,
+      "source_role": "official_reference",
+      "allowed_dimensions": ["margin", "risk"],
+      "read_only": true,
+      "measurement_kind": "derived",
+      "data_window": null,
+      "metric_definition": "Fictional formula values for evaluation only"
+    },
+    {
+      "source_id": "supply-main",
+      "provider": "synthetic_1688_supply",
+      "tool_name": "fixture_supply_snapshot",
+      "source_type": "synthetic",
+      "locator": "synthetic://1688/home-cleaning",
+      "collected_at": "2026-07-12T00:00:00Z",
+      "scope": "Synthetic supply price, MOQ, weight and lead time",
+      "synthetic": true,
+      "source_role": "direct_market_data",
+      "allowed_dimensions": ["margin", "capability_fit", "risk"],
+      "read_only": true,
+      "measurement_kind": "declared",
+      "data_window": "synthetic current quotation",
+      "metric_definition": "Fictional supplier quotation for evaluation only"
+    },
+    {
+      "source_id": "linkfox-creative",
+      "provider": "linkfox",
+      "provider_variant": "linkfox_creative",
+      "tool_name": "synthetic_ai_product_image",
+      "source_type": "synthetic",
+      "locator": "synthetic://linkfox/creative-capability",
+      "collected_at": "2026-07-12T00:00:00Z",
+      "scope": "Synthetic statement that an AI image workflow is available",
+      "synthetic": true,
+      "source_role": "transformation_only",
+      "allowed_dimensions": ["capability_fit"],
+      "read_only": true,
+      "measurement_kind": "declared",
+      "transformations": ["linkfox_creative"],
+      "data_window": null,
+      "metric_definition": "Creative capability only; not demand or conversion evidence"
+    },
+    {
+      "source_id": "ziniao-env",
+      "provider": "ziniao",
+      "tool_name": "synthetic_account_environment_statement",
+      "source_type": "synthetic",
+      "locator": "synthetic://seller-capability/ziniao",
+      "collected_at": "2026-07-12T00:00:00Z",
+      "scope": "Synthetic seller operating environment statement",
+      "synthetic": true,
+      "source_role": "capability_context",
+      "allowed_dimensions": ["capability_fit"],
+      "read_only": true,
+      "measurement_kind": "declared",
+      "data_window": null,
+      "metric_definition": "No account, IP, cookie or login data is included"
+    },
+    {
+      "source_id": "amz123-directory",
+      "provider": "amz123",
+      "tool_name": "synthetic_directory_entry",
+      "source_type": "synthetic",
+      "locator": "synthetic://directory/tool-list",
+      "collected_at": "2026-07-12T00:00:00Z",
+      "scope": "Synthetic tool-directory reference",
+      "synthetic": true,
+      "source_role": "discovery_only",
+      "allowed_dimensions": [],
+      "read_only": true,
+      "measurement_kind": "declared",
+      "data_window": null,
+      "metric_definition": "Directory presence is not product evidence"
+    },
+    {
+      "source_id": "lingxing-own",
+      "provider": "lingxing",
+      "tool_name": "synthetic_seller_report_export",
+      "source_type": "synthetic",
+      "locator": "synthetic://seller/eval-store-a/historical-report",
+      "collected_at": "2026-07-12T00:00:00Z",
+      "scope": "Synthetic first-party historical seller operations",
+      "synthetic": true,
+      "source_role": "seller_first_party_data",
+      "allowed_dimensions": ["margin", "capability_fit", "risk"],
+      "read_only": true,
+      "measurement_kind": "observed",
+      "data_window": "synthetic prior 90 days",
+      "metric_definition": "Only represents the fictional seller scope",
+      "account_scope_id": "eval_store_a"
+    },
+    {
+      "source_id": "amazon-ads-academy",
+      "provider": "amazon_ads",
+      "provider_variant": "academy",
+      "tool_name": "synthetic_learning_reference",
+      "source_type": "synthetic",
+      "locator": "synthetic://amazon-ads-academy/learning",
+      "collected_at": "2026-07-12T00:00:00Z",
+      "scope": "Synthetic official-learning reference",
+      "synthetic": true,
+      "source_role": "official_reference",
+      "allowed_dimensions": [],
+      "read_only": true,
+      "measurement_kind": "declared",
+      "data_window": null,
+      "metric_definition": "Learning material is not live market evidence"
+    },
+    {
+      "source_id": "google-translate",
+      "provider": "google_translate",
+      "tool_name": "synthetic_text_translation",
+      "source_type": "synthetic",
+      "locator": "synthetic://translation/en-zh",
+      "collected_at": "2026-07-12T00:00:00Z",
+      "scope": "Synthetic translation transformation",
+      "synthetic": true,
+      "source_role": "transformation_only",
+      "allowed_dimensions": [],
+      "read_only": true,
+      "measurement_kind": "derived",
+      "transformations": ["google_translate"],
+      "data_window": null,
+      "metric_definition": "Translation does not create a new factual source"
+    },
+    {
+      "source_id": "hubu-collector",
+      "provider": "amazon_ads",
+      "provider_variant": "report_export",
+      "tool_name": "synthetic_whitelisted_report_download",
+      "source_type": "synthetic",
+      "locator": "synthetic://amazon-ads/exported-by-hubu",
+      "collected_at": "2026-07-12T00:00:00Z",
+      "scope": "Synthetic report transported by a whitelisted RPA",
+      "synthetic": true,
+      "source_role": "seller_first_party_data",
+      "allowed_dimensions": ["margin", "competition", "risk"],
+      "read_only": true,
+      "measurement_kind": "observed",
+      "original_provider": "amazon_ads",
+      "collector": "hubu_rpa",
+      "data_window": "synthetic prior 30 days",
+      "metric_definition": "Amazon Ads is the factual provider; Hubu only transported the report",
+      "account_scope_id": "eval_store_a"
+    },
+    {
+      "source_id": "zhiwubuyan-post",
+      "provider": "zhiwubuyan",
+      "tool_name": "synthetic_community_post",
+      "source_type": "synthetic",
+      "locator": "synthetic://community/post-001",
+      "collected_at": "2026-07-12T00:00:00Z",
+      "scope": "Synthetic unverified community claims",
+      "synthetic": true,
+      "source_role": "experience_reference",
+      "allowed_dimensions": [],
+      "read_only": true,
+      "measurement_kind": "declared",
+      "data_window": null,
+      "metric_definition": "Unverified author, market, date and raw report"
+    },
+    {
+      "source_id": "ss-cpc",
+      "provider": "sellersprite",
+      "tool_name": "synthetic_keyword_cpc_broad",
+      "source_type": "synthetic",
+      "locator": "synthetic://keyword/lint-roller/broad",
+      "collected_at": "2026-07-10T00:00:00Z",
+      "scope": "Synthetic broad-match CPC estimate",
+      "synthetic": true,
+      "source_role": "direct_market_data",
+      "allowed_dimensions": ["competition", "risk"],
+      "read_only": true,
+      "measurement_kind": "estimated",
+      "data_window": "synthetic trailing 30 days",
+      "metric_definition": "Broad-match CPC estimate"
+    },
+    {
+      "source_id": "sif-cpc",
+      "provider": "sif",
+      "tool_name": "synthetic_keyword_cpc_exact",
+      "source_type": "synthetic",
+      "locator": "synthetic://keyword/lint-roller/exact",
+      "collected_at": "2026-07-12T00:00:00Z",
+      "scope": "Synthetic exact-match CPC estimate",
+      "synthetic": true,
+      "source_role": "direct_market_data",
+      "allowed_dimensions": ["competition", "risk"],
+      "read_only": true,
+      "measurement_kind": "estimated",
+      "data_window": "synthetic trailing 7 days",
+      "metric_definition": "Exact-match CPC estimate"
+    }
+  ],
+  "candidates": [
+    {
+      "candidate_id": "ss-sif-complete",
+      "product_name": "Reusable pet hair roller",
+      "category": "Home cleaning",
+      "url": null,
+      "facts": {
+        "price_usd": 22.99,
+        "estimated_monthly_sales": 1600,
+        "keyword_search_volume": 18000,
+        "product_concentration_top10_pct": 32,
+        "estimated_cpc_usd": 0.85,
+        "paid_traffic_share_pct": 38,
+        "supply_price_cny": 18,
+        "moq": 100,
+        "unit_weight_g": 220,
+        "lead_time_days": 12,
+        "first_batch_known_cost_cny": 8200,
+        "known_cost_margin_pct": 42
+      },
+      "evidence": [
+        {"field": "price_usd", "source_id": "ss-main", "value": 22.99, "unit": "USD", "as_of": "2026-07-12"},
+        {"field": "estimated_monthly_sales", "source_id": "ss-main", "value": 1600, "unit": "units", "as_of": "2026-07-12"},
+        {"field": "keyword_search_volume", "source_id": "ss-main", "value": 18000, "unit": "searches", "as_of": "2026-07-12"},
+        {"field": "product_concentration_top10_pct", "source_id": "ss-main", "value": 32, "unit": "percent", "as_of": "2026-07-12"},
+        {"field": "estimated_cpc_usd", "source_id": "ss-main", "value": 0.85, "unit": "USD", "as_of": "2026-07-12"},
+        {"field": "paid_traffic_share_pct", "source_id": "sif-main", "value": 38, "unit": "percent", "as_of": "2026-07-12"},
+        {"field": "supply_price_cny", "source_id": "supply-main", "value": 18, "unit": "CNY", "as_of": "2026-07-12"},
+        {"field": "moq", "source_id": "supply-main", "value": 100, "unit": "units", "as_of": "2026-07-12"},
+        {"field": "known_cost_margin_pct", "source_id": "cost-main", "value": 42, "unit": "percent", "as_of": "2026-07-12"}
+      ],
+      "observations": [
+        {"kind": "fact", "text": "All numeric values are synthetic evaluation data."},
+        {"kind": "inference", "text": "SIF traffic share supports advertising-dependency analysis but does not independently prove market demand."}
+      ],
+      "missing_fields": []
+    },
+    {
+      "candidate_id": "linkfox-assisted",
+      "product_name": "Manual fabric lint brush",
+      "category": "Home cleaning",
+      "url": null,
+      "facts": {
+        "price_usd": 18.99,
+        "estimated_monthly_sales": 1200,
+        "keyword_search_volume": 13000,
+        "product_concentration_top10_pct": 29,
+        "supply_price_cny": 11,
+        "moq": 100,
+        "unit_weight_g": 140,
+        "first_batch_known_cost_cny": 6900,
+        "known_cost_margin_pct": 40
+      },
+      "evidence": [
+        {"field": "estimated_monthly_sales", "source_id": "amazon-main", "value": 1200, "unit": "units", "as_of": "2026-07-12"},
+        {"field": "keyword_search_volume", "source_id": "amazon-main", "value": 13000, "unit": "searches", "as_of": "2026-07-12"},
+        {"field": "product_concentration_top10_pct", "source_id": "amazon-main", "value": 29, "unit": "percent", "as_of": "2026-07-12"},
+        {"field": "supply_price_cny", "source_id": "supply-main", "value": 11, "unit": "CNY", "as_of": "2026-07-12"},
+        {"field": "known_cost_margin_pct", "source_id": "cost-main", "value": 40, "unit": "percent", "as_of": "2026-07-12"}
+      ],
+      "observations": [
+        {"kind": "inference", "text": "LinkFox creative tools may support image prototyping; this is not demand, sales or conversion evidence."}
+      ],
+      "missing_fields": []
+    },
+    {
+      "candidate_id": "ops-only",
+      "product_name": "Unvalidated desk accessory",
+      "category": "Office accessories",
+      "url": null,
+      "facts": {},
+      "evidence": [],
+      "observations": [
+        {"kind": "user_profile", "text": "The fictional team declares access to Ziniao, AMZ123, Lingxing, Amazon Ads Academy and Google Translate."},
+        {"kind": "inference", "text": "These operating tools do not establish Amazon US product demand or economics."}
+      ],
+      "missing_fields": ["target_market_demand", "competition", "price", "procurement_cost", "moq", "weight", "compliance"]
+    },
+    {
+      "candidate_id": "community-hype",
+      "product_name": "Community-hyped kitchen gadget",
+      "category": "Kitchen tools",
+      "url": null,
+      "facts": {},
+      "evidence": [],
+      "observations": [
+        {"kind": "experience", "text": "A synthetic Zhiwubuyan-style post claims daily sales 3000, CPC 0.20 USD, certification cost 9.99 USD and margin 80%, but provides no author verification, market scope, collection date or raw report."}
+      ],
+      "missing_fields": ["verified_sales", "verified_cpc", "verified_certification_cost", "verified_margin", "market", "collected_at"]
+    },
+    {
+      "candidate_id": "cpc-conflict",
+      "product_name": "Compact lint roller",
+      "category": "Home cleaning",
+      "url": null,
+      "facts": {
+        "price_usd": 19.99
+      },
+      "evidence": [
+        {"field": "price_usd", "source_id": "amazon-main", "value": 19.99, "unit": "USD", "as_of": "2026-07-12"},
+        {"field": "cpc_usd_broad_match", "source_id": "ss-cpc", "value": 1.2, "unit": "USD", "as_of": "2026-07-10"},
+        {"field": "cpc_usd_exact_match", "source_id": "sif-cpc", "value": 0.65, "unit": "USD", "as_of": "2026-07-12"}
+      ],
+      "observations": [
+        {"kind": "fact", "text": "The two synthetic CPC estimates use different match types, dates and windows."}
+      ],
+      "missing_fields": ["normalized_cpc", "procurement_cost", "moq", "weight", "complete_margin"],
+      "conflicts": [
+        "SellerSprite broad-match 30-day CPC estimate is 1.20 USD as of 2026-07-10; SIF exact-match 7-day estimate is 0.65 USD as of 2026-07-12. The values are not directly comparable."
+      ]
+    },
+    {
+      "candidate_id": "lingxing-history-only",
+      "product_name": "Seller-history lookalike accessory",
+      "category": "Home accessories",
+      "url": null,
+      "facts": {
+        "historical_gross_margin_pct": 31,
+        "historical_refund_rate_pct": 11,
+        "historical_inventory_turnover_days": 84,
+        "historical_ad_spend_share_pct": 24
+      },
+      "evidence": [
+        {"field": "historical_gross_margin_pct", "source_id": "lingxing-own", "value": 31, "unit": "percent", "as_of": "2026-07-12"},
+        {"field": "historical_refund_rate_pct", "source_id": "lingxing-own", "value": 11, "unit": "percent", "as_of": "2026-07-12"},
+        {"field": "historical_inventory_turnover_days", "source_id": "lingxing-own", "value": 84, "unit": "days", "as_of": "2026-07-12"},
+        {"field": "historical_ad_spend_share_pct", "source_id": "lingxing-own", "value": 24, "unit": "percent", "as_of": "2026-07-12"}
+      ],
+      "observations": [
+        {"kind": "fact", "text": "Synthetic prior-90-day seller history can inform capability, margin and risk for this fictional account only."},
+        {"kind": "inference", "text": "This historical window is a backtest input, not a future-profit prediction or proof of total Amazon US demand."}
+      ],
+      "missing_fields": ["target_market_demand", "target_market_competition", "current_procurement_cost", "moq", "weight", "compliance"]
+    },
+    {
+      "candidate_id": "hubu-transported-ads",
+      "product_name": "Seller ad-report lookalike accessory",
+      "category": "Home accessories",
+      "url": null,
+      "facts": {
+        "seller_account_ad_spend_usd": 1250,
+        "seller_account_attributed_sales_usd": 4200,
+        "seller_account_acos_pct": 29.76
+      },
+      "evidence": [
+        {"field": "seller_account_ad_spend_usd", "source_id": "hubu-collector", "value": 1250, "unit": "USD", "as_of": "2026-07-12"},
+        {"field": "seller_account_attributed_sales_usd", "source_id": "hubu-collector", "value": 4200, "unit": "USD", "as_of": "2026-07-12"},
+        {"field": "seller_account_acos_pct", "source_id": "hubu-collector", "value": 29.76, "unit": "percent", "as_of": "2026-07-12"}
+      ],
+      "observations": [
+        {"kind": "fact", "text": "Synthetic Amazon Ads first-party report transported by a whitelisted Hubu RPA."},
+        {"kind": "inference", "text": "Hubu is the collector, not the factual provider; this seller-scoped report does not establish total market demand."}
+      ],
+      "missing_fields": ["target_market_demand", "target_market_competition", "current_procurement_cost", "moq", "weight", "compliance"]
+    }
+  ]
+}

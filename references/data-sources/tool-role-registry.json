@@ -1,0 +1,301 @@
+{
+  "version": "1.0",
+  "checked_at": "2026-07-12",
+  "principle": "按能力而不是按品牌授权；只有可溯源的只读能力可以进入选品证据。",
+  "evidence_roles": [
+    "direct_market_data",
+    "seller_first_party_data",
+    "official_reference",
+    "experience_reference",
+    "discovery_only",
+    "capability_context",
+    "transformation_only",
+    "collection_only",
+    "forbidden_write"
+  ],
+  "providers": [
+    {
+      "provider_id": "sellersprite",
+      "display_name": "卖家精灵",
+      "integration_priority": "P0",
+      "accepted_modes": ["live_mcp", "verified_import"],
+      "official_sources": [
+        "https://open.sellersprite.com/mcp",
+        "https://www.sellersprite.com/cn/help/market-selection-guide"
+      ],
+      "capabilities": [
+        {
+          "capability_id": "product_market_keyword_research",
+          "direction": "read",
+          "source_role": "direct_market_data",
+          "allowed_dimensions": ["demand", "competition", "risk"],
+          "requirements": [
+            "记录实际 MCP 工具名、站点、查询条件、采集日期和数据窗口",
+            "销量、销额、BSR 换算等按 estimated 处理，除非来源明确说明为 observed",
+            "集中度必须记录 Top N 与分母口径"
+          ]
+        },
+        {
+          "capability_id": "request_review",
+          "direction": "write",
+          "source_role": "forbidden_write",
+          "allowed_dimensions": [],
+          "requirements": ["不得在 product-research 中启用或调用"]
+        }
+      ]
+    },
+    {
+      "provider_id": "ziniao",
+      "display_name": "紫鸟浏览器",
+      "integration_priority": "none",
+      "accepted_modes": [],
+      "official_sources": [
+        "https://www.ziniao.com/help/docs/Overview"
+      ],
+      "capabilities": [
+        {
+          "capability_id": "isolated_account_environment",
+          "direction": "read",
+          "source_role": "capability_context",
+          "allowed_dimensions": ["capability_fit"],
+          "requirements": [
+            "只有 profile 或 SOP 已确认时才可作为运营能力背景",
+            "账号、IP、设备、Cookie、登录态和成员信息不得进入批次或报告"
+          ]
+        },
+        {
+          "capability_id": "store_browser_actions",
+          "direction": "write",
+          "source_role": "forbidden_write",
+          "allowed_dimensions": [],
+          "requirements": ["不得登录或操作店铺"]
+        }
+      ]
+    },
+    {
+      "provider_id": "sif",
+      "display_name": "SIF",
+      "integration_priority": "P0",
+      "accepted_modes": ["live_mcp", "verified_import"],
+      "official_sources": [
+        "https://mcp.sif.com/",
+        "https://www.sif.com/about"
+      ],
+      "capabilities": [
+        {
+          "capability_id": "market_keyword_traffic_ads_analysis",
+          "direction": "read",
+          "source_role": "direct_market_data",
+          "allowed_dimensions": ["demand", "competition", "risk"],
+          "requirements": [
+            "记录关键词匹配方式、ASIN、站点、时间窗口和实际 MCP 工具名",
+            "流量结构只支持广告依赖和竞争判断，不能单独证明完整市场需求",
+            "广告账户数据必须使用非敏感 account_scope_id 隔离"
+          ]
+        }
+      ]
+    },
+    {
+      "provider_id": "amz123",
+      "display_name": "AMZ123",
+      "integration_priority": "none",
+      "accepted_modes": [],
+      "official_sources": [
+        "https://www.amz123.com/about"
+      ],
+      "capabilities": [
+        {
+          "capability_id": "tool_and_content_directory",
+          "direction": "read",
+          "source_role": "discovery_only",
+          "allowed_dimensions": [],
+          "requirements": ["只用于发现原始网站；事实必须追到最终官方或数据提供方"]
+        }
+      ]
+    },
+    {
+      "provider_id": "lingxing",
+      "display_name": "领星 ERP",
+      "integration_priority": "P1",
+      "accepted_modes": ["verified_import", "live_mcp"],
+      "official_sources": [
+        "https://www.lingxing.com/help/index",
+        "https://apidoc.lingxing.com/",
+        "https://www.lingxing.com/help/article/mcp"
+      ],
+      "capabilities": [
+        {
+          "capability_id": "seller_reports_export",
+          "direction": "read",
+          "source_role": "seller_first_party_data",
+          "allowed_dimensions": ["margin", "capability_fit", "risk"],
+          "requirements": [
+            "优先使用用户核实的 CSV/XLSX 导出",
+            "MCP 只能通过受限子账号和查询工具白名单接入，并继承其店铺与字段权限",
+            "历史经营数据只能说明当前卖家的经营表现，不能证明外部市场规模",
+            "使用非敏感 account_scope_id 隔离店铺范围"
+          ]
+        },
+        {
+          "capability_id": "erp_management_actions",
+          "direction": "write",
+          "source_role": "forbidden_write",
+          "allowed_dimensions": [],
+          "requirements": ["采购、订单、库存、广告、Listing 等写能力全部禁用"]
+        }
+      ]
+    },
+    {
+      "provider_id": "zhiwubuyan",
+      "display_name": "知无不言",
+      "integration_priority": "none",
+      "accepted_modes": [],
+      "official_sources": [
+        "https://www.wearesellers.com/page/aboutus",
+        "https://www.wearesellers.com/page/terms"
+      ],
+      "capabilities": [
+        {
+          "capability_id": "community_experience",
+          "direction": "read",
+          "source_role": "experience_reference",
+          "allowed_dimensions": [],
+          "requirements": [
+            "只把人工阅读后的观点记录为 experience",
+            "不得把帖子数字写成事实、硬过滤条件或精确分数",
+            "不得批量搬运付费或受限内容"
+          ]
+        }
+      ]
+    },
+    {
+      "provider_id": "amazon_ads",
+      "display_name": "亚马逊广告",
+      "integration_priority": "P1",
+      "accepted_modes": ["verified_import"],
+      "official_sources": [
+        "https://advertising.amazon.com/academy/catalog?activeLocale=zh-cn",
+        "https://advertising.amazon.com/zh-cn/about-api"
+      ],
+      "capabilities": [
+        {
+          "capability_id": "academy_content",
+          "direction": "read",
+          "source_role": "official_reference",
+          "allowed_dimensions": [],
+          "requirements": ["官方规则与讲师案例分开标注；学习材料不替代实时市场数据"]
+        },
+        {
+          "capability_id": "seller_ad_reports",
+          "direction": "read",
+          "source_role": "seller_first_party_data",
+          "allowed_dimensions": ["demand", "competition", "risk"],
+          "requirements": [
+            "只读报告必须绑定 seller_id、站点、ASIN/关键词和时间窗口",
+            "仅支持该卖家历史范围内的验证，不外推为全市场事实"
+          ]
+        },
+        {
+          "capability_id": "ads_management",
+          "direction": "write",
+          "source_role": "forbidden_write",
+          "allowed_dimensions": [],
+          "requirements": ["创建活动、改竞价、关键词或预算全部禁用"]
+        }
+      ]
+    },
+    {
+      "provider_id": "google_translate",
+      "display_name": "Google 翻译",
+      "integration_priority": "P2",
+      "accepted_modes": [],
+      "official_sources": [
+        "https://support.google.com/translate/",
+        "https://docs.cloud.google.com/translate/docs/api-overview"
+      ],
+      "capabilities": [
+        {
+          "capability_id": "text_translation",
+          "direction": "read",
+          "source_role": "transformation_only",
+          "allowed_dimensions": [],
+          "requirements": [
+            "保留原文、原 source_id、源语言和目标语言",
+            "翻译结果不产生新的事实来源，关键语义抽样人工复核",
+            "支持语言数量会变化，不在策略中硬编码"
+          ]
+        }
+      ]
+    },
+    {
+      "provider_id": "hubu_rpa",
+      "display_name": "虎步 RPA",
+      "integration_priority": "P2",
+      "accepted_modes": ["verified_import"],
+      "official_sources": [
+        "https://support.huburpa.com/7d8f/806d",
+        "https://support.huburpa.com/cc8e/bc56/6708"
+      ],
+      "capabilities": [
+        {
+          "capability_id": "whitelisted_report_download",
+          "direction": "read",
+          "source_role": "collection_only",
+          "allowed_dimensions": [],
+          "requirements": [
+            "只允许固定 RPA ID 的报表下载白名单",
+            "Agent 不得自行选择 RPA ID，也不得持有 BOSS 凭证、AppSecret 或 AppToken",
+            "collector 记录 hubu_rpa，provider、original_provider 与 source_role 仍继承 Amazon、领星等原系统报表",
+            "下载结果按 verified_import 重新验收"
+          ]
+        },
+        {
+          "capability_id": "cash_ads_and_store_actions",
+          "direction": "write",
+          "source_role": "forbidden_write",
+          "allowed_dimensions": [],
+          "requirements": ["自动提现、广告操作、上架、消息回复和任意 UI 操作全部禁用"]
+        }
+      ]
+    },
+    {
+      "provider_id": "linkfox",
+      "display_name": "LinkFox",
+      "integration_priority": "P2",
+      "accepted_modes": ["verified_import"],
+      "official_sources": [
+        "https://www.linkfox.com/agent",
+        "https://www.linkfox.ai/"
+      ],
+      "capabilities": [
+        {
+          "capability_id": "creative_generation",
+          "direction": "read",
+          "source_role": "transformation_only",
+          "allowed_dimensions": ["capability_fit"],
+          "requirements": [
+            "AI 模特、换图、抠图只用于素材验证，不作为需求或转化证据",
+            "只有 profile 已确认团队具备该工具时，才能影响 capability_fit"
+          ]
+        },
+        {
+          "capability_id": "agent_research_gateway",
+          "direction": "read",
+          "source_role": "collection_only",
+          "allowed_dimensions": [],
+          "requirements": [
+            "不得只写 LinkFox 作为事实 provider；必须保留卖家精灵、Keepa、SIF 等上游 original_provider",
+            "无完整上游来源和数据窗口的输出只能进入待核实"
+          ]
+        },
+        {
+          "capability_id": "auto_listing_and_fulfillment",
+          "direction": "write",
+          "source_role": "forbidden_write",
+          "allowed_dimensions": [],
+          "requirements": ["自动上架、订单同步、工厂下单和物流调度全部禁用"]
+        }
+      ]
+    }
+  ]
+}

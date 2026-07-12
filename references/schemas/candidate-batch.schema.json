@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/cross-border-product-research/candidate-batch.schema.json",
+  "title": "Candidate Batch",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "batch_id",
+    "seller_id",
+    "platform",
+    "market",
+    "collected_at",
+    "mode",
+    "sources",
+    "candidates"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.1"},
+    "batch_id": {"type": "string", "minLength": 1},
+    "seller_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_][A-Za-z0-9_-]{0,63}$"
+    },
+    "platform": {
+      "enum": ["amazon", "shein", "tiktok", "dtc-seo", "reddit", "1688", "unknown"]
+    },
+    "market": {"type": "string", "minLength": 1},
+    "collected_at": {"type": "string", "format": "date-time"},
+    "mode": {
+      "enum": ["live_mcp", "verified_import", "browser_assisted", "synthetic_demo"]
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["source_id", "provider", "source_type", "locator", "collected_at", "scope", "synthetic", "source_role", "allowed_dimensions", "read_only", "measurement_kind"],
+        "properties": {
+          "source_id": {"type": "string", "minLength": 1},
+          "provider": {"type": "string", "minLength": 1},
+          "provider_variant": {"type": "string", "minLength": 1},
+          "tool_name": {"type": "string", "minLength": 1},
+          "source_type": {"enum": ["mcp", "api", "browser", "csv", "xlsx", "json", "reference", "synthetic"]},
+          "locator": {"type": "string", "minLength": 1},
+          "collected_at": {"type": "string", "format": "date-time"},
+          "scope": {"type": "string", "minLength": 1},
+          "synthetic": {"type": "boolean"},
+          "source_role": {
+            "enum": [
+              "direct_market_data",
+              "seller_first_party_data",
+              "official_reference",
+              "experience_reference",
+              "discovery_only",
+              "capability_context",
+              "transformation_only",
+              "collection_only"
+            ]
+          },
+          "allowed_dimensions": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {"enum": ["demand", "competition", "margin", "capability_fit", "risk"]}
+          },
+          "read_only": {"const": true},
+          "measurement_kind": {"enum": ["observed", "estimated", "derived", "declared", "unknown"]},
+          "original_provider": {"type": "string", "minLength": 1},
+          "collector": {"type": "string", "minLength": 1},
+          "transformations": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "data_window": {"type": ["string", "null"]},
+          "metric_definition": {"type": ["string", "null"]},
+          "account_scope_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_][A-Za-z0-9_-]{0,63}$"
+          }
+        }
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["candidate_id", "product_name", "category", "facts", "evidence", "observations", "missing_fields"],
+        "properties": {
+          "candidate_id": {"type": "string", "minLength": 1},
+          "product_name": {"type": "string", "minLength": 1},
+          "category": {"type": "string", "minLength": 1},
+          "url": {"type": ["string", "null"]},
+          "facts": {"type": "object"},
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["field", "source_id", "value"],
+              "properties": {
+                "field": {"type": "string"},
+                "source_id": {"type": "string"},
+                "value": {},
+                "unit": {"type": ["string", "null"]},
+                "as_of": {"type": ["string", "null"]}
+              }
+            }
+          },
+          "observations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["kind", "text"],
+              "properties": {
+                "kind": {"enum": ["fact", "experience", "user_profile", "inference"]},
+                "text": {"type": "string"}
+              }
+            }
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "conflicts": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        }
+      }
+    }
+  }
+}

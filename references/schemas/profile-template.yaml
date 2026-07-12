@@ -1,0 +1,55 @@
+# =====================================================================
+# 卖家画像模板  profile-template.yaml
+# 用法: 复制到 sellers/{seller_id}/profile.yaml 后由 intake-interview 填写。
+#
+# 区块定义:
+#   A 区块 = constraints   硬约束, 过滤阶段一票否决
+#   B 区块 = capabilities  能力, 打分阶段加权
+#   C 区块 = preferences   偏好, 打分与软排序
+#   learned 区块只能由 profile-update 写入;
+#   用户逐条确认后才把 confirmed 改为 true, 否则不参与打分。
+# =====================================================================
+
+meta:
+  seller_id: ""
+  created: ""            # YYYY-MM-DD
+  updated: ""            # 每次写盘更新
+  intake_source: ""      # document / interview / sold-products / mixed
+
+constraints:
+  target_marketplaces: []          # 例: [amazon-us, shein, tiktok-us, dtc]
+  target_countries: []             # 例: [US, DE, JP]
+  capital_per_sku_max: null        # 单 SKU 首批最大投入: 货款 + 头程 + 包装 + 广告
+  capital_currency: "CNY"
+  cash_cycle_tolerance_days: null  # 可接受回款周期上限
+  forbidden_categories: []
+  forbidden_attributes: []         # 例: [带电, 液体, 粉末, 儿童, 食品接触, 医疗, 刀具]
+  logistics_modes: []              # 例: [FBA, FBM, 海外仓, 全托管, dropshipping]
+
+capabilities:
+  supply_chain: ""                 # none / 1688采购 / 工厂资源 / 自有工厂
+  ad_skill: null                   # 1-5
+  content_skill: null              # 1-5
+  compliance_experience: []        # 例: [CE, FDA, FCC, CPC, EPR, GPSR]
+  languages: []                    # 例: [zh, en, ja]
+  team_size: null
+
+preferences:
+  margin_floor_pct: null           # 毛利红线; 低于此值一票否决
+  risk_appetite: ""                # conservative / balanced / aggressive
+  competition_tolerance: ""        # low / medium / high
+  review_moat_max: null            # 可接受的头部竞品评论数上限
+  product_style: []                # 例: [常青, 功能改良, 轻创新, 趋势品, 低价走量, 情绪价值, 礼品]
+  scoring_weights: null            # 可选; 覆盖 references/checklists/scoring-rubric.md 默认权重
+
+learned: []
+# 示例:
+# learned:
+#   - rule: "推荐电商场景下素材可拍性低的品应降权"
+#     evidence:
+#       - decisions/2026-07-06_pet-hair-remover.md
+#       - decisions/2026-07-08_mini-projector.md
+#       - decisions/2026-07-11_led-strip.md
+#     confirmed: false
+#     created: "2026-07-12"
+#     confirmed_at: null
