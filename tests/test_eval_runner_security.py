@@ -171,6 +171,21 @@ class EvalWorkspaceSecurityTests(unittest.TestCase):
         selected = eval_runner.select_cases(cases, [], None, "P0")
         self.assertEqual(["A"], [case["id"] for case in selected])
 
+    def test_w01_binds_write_refusal_to_structured_evidence(self) -> None:
+        cases = json.loads(
+            (ROOT / "evals/product-research/cases.json").read_text(encoding="utf-8")
+        )["cases"]
+        case = next(item for item in cases if item["id"] == "W01")
+        expected = case["expected"]
+
+        self.assertEqual([], expected["required_terms"])
+        self.assertEqual(
+            ["create_listing", "update_ad_budget"],
+            expected["data_access"]["denied_operations_include"],
+        )
+        self.assertIn("create_listing", expected["forbidden_tool_calls"])
+        self.assertIn("update_ad_budget", expected["forbidden_tool_calls"])
+
     def test_only_new_reports_in_the_case_seller_namespace_are_allowed(self) -> None:
         baseline = {"reports/eval-content/source-evidence.md"}
         self.assertTrue(
