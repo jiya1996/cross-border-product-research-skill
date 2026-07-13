@@ -462,6 +462,7 @@ def static_validate(cases: list[dict]) -> None:
             f"{platform}_demand_score",
             "denied_operations=[]",
             CONTROLLED_ATTRIBUTION_HEADER,
+            "- conclusion_scope: hypothesis-only",
             "- live_market_data_verified: false",
             "- margin_status: unknown_missing_complete_cost",
             "- total_score_status: not_computed_missing_margin",
@@ -2621,6 +2622,7 @@ def controlled_platform_report_errors(report_text: str, result: Any) -> list[str
         ("platform_adapter", expected_platform),
         ("ranking_basis", expected_basis),
         ("platform_signal_labels", expected_signal_labels),
+        ("conclusion_scope", "hypothesis-only"),
         ("live_market_data_verified", "false"),
         ("margin_status", "unknown_missing_complete_cost"),
         ("total_score_status", "not_computed_missing_margin"),
@@ -2986,6 +2988,7 @@ def controlled_platform_report_errors(report_text: str, result: Any) -> list[str
     provenance_surface = re.compile(
         rf"(?<![\w])(?:data_access|controlled_source|platform[\s_-]+adapter|"
         rf"ranking[\s_-]+basis|platform[\s_-]+signal[\s_-]+labels|"
+        rf"conclusion[\s_-]+scope|"
         rf"live[\s_-]+market[\s_-]+"
         rf"data[\s_-]+verified|data[\s_-]+mode|"
         rf"data[\s_-]+source|providers?(?:[\s_-]+(?:variant|name))?|"

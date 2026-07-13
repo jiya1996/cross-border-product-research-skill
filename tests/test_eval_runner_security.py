@@ -848,6 +848,7 @@ class EvalRuleEffectTests(unittest.TestCase):
             "- platform_adapter: amazon\n"
             "- ranking_basis: amazon_search_review_cpc\n"
             "- platform_signal_labels: 搜索|评论|CPC\n"
+            "- conclusion_scope: hypothesis-only\n"
             "- live_market_data_verified: false\n"
             "- margin_status: unknown_missing_complete_cost\n"
             "- total_score_status: not_computed_missing_margin\n\n"

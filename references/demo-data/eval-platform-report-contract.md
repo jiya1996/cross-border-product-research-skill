@@ -27,6 +27,7 @@ P01A / Amazon 逐字写：
 - platform_adapter: amazon
 - ranking_basis: amazon_search_review_cpc
 - platform_signal_labels: 搜索|评论|CPC
+- conclusion_scope: hypothesis-only
 - live_market_data_verified: false
 - margin_status: unknown_missing_complete_cost
 - total_score_status: not_computed_missing_margin
@@ -37,6 +38,7 @@ P01B / TikTok 逐字写：
 - platform_adapter: tiktok
 - ranking_basis: tiktok_visual_interaction_same_density_logistics
 - platform_signal_labels: 视觉|互动|同款密度|物流
+- conclusion_scope: hypothesis-only
 - live_market_data_verified: false
 - margin_status: unknown_missing_complete_cost
 - total_score_status: not_computed_missing_margin
