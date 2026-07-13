@@ -22,7 +22,7 @@
 | HandsomeWang 上游审计与 clean-room 边界 | 完成 | `references/upstream/handsomewang-ai-skills-review.md` |
 | 画像、SOP、结构化决策日志与 learned v2 状态机 | 完成 | `scripts/learned_rules.py`、`sellers/_example/`、四个 Skill |
 | 合成 demo 的硬过滤、缺数据状态、逐候选归因 | 完成 | `scripts/run_demo.py` |
-| 行为单测 | 129/129 通过 | `tests/test_learned_rules.py`、`tests/test_learned_cli.py`、`tests/test_eval_setup.py`、`tests/test_eval_runner_security.py`、`tests/test_evidence_export.py`、`tests/test_product_research_demo.py`、`tests/test_video_demo.py`、`tests/test_reset_demo.py`、`tests/test_build_release.py` |
+| 行为单测 | 131/131 通过 | `tests/test_learned_rules.py`、`tests/test_learned_cli.py`、`tests/test_eval_setup.py`、`tests/test_eval_runner_security.py`、`tests/test_evidence_export.py`、`tests/test_product_research_demo.py`、`tests/test_video_demo.py`、`tests/test_reset_demo.py`、`tests/test_build_release.py` |
 | product-research 评测 case | 26 个 | `evals/product-research/cases.json` |
 | 真人复盘验收 case | 4 个 | `evals/intake-retrospective/cases.json` |
 | 100 分 rubric 与硬门禁 | 完成 | `evals/product-research/rubric.json` |

@@ -233,6 +233,37 @@ class EvalCommandAuditTests(unittest.TestCase):
         _, audit = eval_runner.audit_event_stream(events)
         self.assertEqual([], audit["command_execution"]["violations"])
 
+    def test_forbidden_claim_check_accepts_explicit_negation_only(self) -> None:
+        term = "市场需求已验证"
+        self.assertTrue(eval_runner.forbidden_claim_present(term, term))
+        self.assertFalse(
+            eval_runner.forbidden_claim_present(
+                "本报告不得声称市场需求已验证", term
+            )
+        )
+        self.assertTrue(
+            eval_runner.forbidden_claim_present(
+                "不得声称市场需求已验证；但市场需求已验证", term
+            )
+        )
+        self.assertTrue(
+            eval_runner.forbidden_claim_present(
+                "不推荐该候选但市场需求已验证", term
+            )
+        )
+        for adversarial in (
+            "并非假设而是市场需求已验证",
+            "没有夸大而是市场需求已验证",
+            "不能否认市场需求已验证",
+            "无证据反驳市场需求已验证",
+            "不代表假消息且市场需求已验证",
+            "无证据证明这是错的所以市场需求已验证",
+        ):
+            with self.subTest(adversarial=adversarial):
+                self.assertTrue(
+                    eval_runner.forbidden_claim_present(adversarial, term)
+                )
+
     def test_repeated_executions_keep_one_hash_per_execution(self) -> None:
         item = {
             "type": "command_execution",
@@ -389,6 +420,66 @@ class EvalRuleEffectTests(unittest.TestCase):
             [{"candidate_id": "lr-a17", "scores": {"competition": 2}}],
         )
         self.assertTrue(any("score must equal" in error for error in errors))
+
+    def test_proposed_active_pair_binds_before_after_and_negative_control(self) -> None:
+        proposed = {
+            "rule_effects": [],
+            "recommended": [
+                {"candidate_id": "hit", "scores": {"competition": 2}},
+                {"candidate_id": "control", "scores": {"competition": 3}},
+            ],
+        }
+        active = {
+            "rule_effects": [
+                {
+                    "rule_id": "rule-one",
+                    "candidate_id": "hit",
+                    "dimension": "competition",
+                    "delta": -1,
+                    "before": 2,
+                    "after": 1,
+                }
+            ],
+            "recommended": [
+                {"candidate_id": "hit", "scores": {"competition": 1}},
+                {"candidate_id": "control", "scores": {"competition": 3}},
+            ],
+        }
+        baselines = {"hit": 2, "control": 3}
+        self.assertEqual(
+            [],
+            eval_runner.learned_effect_pair_invariant_errors(
+                proposed, active, baselines
+            ),
+        )
+        broken_before = json.loads(json.dumps(active))
+        broken_before["rule_effects"][0]["before"] = 3
+        errors = eval_runner.learned_effect_pair_invariant_errors(
+            proposed, broken_before, baselines
+        )
+        self.assertTrue(any("effect.before" in error for error in errors))
+        broken_control = json.loads(json.dumps(active))
+        broken_control["recommended"][1]["scores"]["competition"] = 2
+        errors = eval_runner.learned_effect_pair_invariant_errors(
+            proposed, broken_control, baselines
+        )
+        self.assertTrue(any("negative-control" in error for error in errors))
+        missing_control = json.loads(json.dumps(active))
+        missing_control["recommended"] = missing_control["recommended"][:1]
+        errors = eval_runner.learned_effect_pair_invariant_errors(
+            {**proposed, "recommended": proposed["recommended"][:1]},
+            missing_control,
+            baselines,
+        )
+        self.assertTrue(any("negative control" in error for error in errors))
+
+        fixture = (
+            ROOT / "references/demo-data/eval-learned-transfer-candidates.md"
+        ).read_text(encoding="utf-8")
+        self.assertEqual(
+            {"lr-a17": 2.0, "lr-b42": 2.0, "lr-c63": 2.0, "lr-d88": 3.0},
+            eval_runner.parse_controlled_competition_baselines(fixture),
+        )
 
 
 class EvalGradeBindingTests(unittest.TestCase):

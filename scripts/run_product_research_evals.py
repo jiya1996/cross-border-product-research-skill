@@ -50,7 +50,7 @@ AGENT_INPUT_DENY_EXACT = frozenset(
     }
 )
 AGENT_INPUT_DENY_PREFIXES = ("references/upstream/",)
-COMMAND_PROFILE = "codex_exec_ephemeral_workspace_write_v3"
+COMMAND_PROFILE = "codex_exec_ephemeral_workspace_write_v4"
 SAFE_ENV_NAMES = frozenset(
     {
         "HOME",
@@ -170,6 +170,35 @@ def load_cases() -> list[dict]:
     return load_json(MANIFEST)["cases"]
 
 
+def forbidden_claim_present(text: str, term: str) -> bool:
+    """Return true only when a forbidden phrase is asserted, not explicitly negated."""
+
+    offset = 0
+    disclaimer = re.compile(
+        r"(?:"
+        r"(?:不得|不能|不可|不应|禁止|避免)"
+        r"(?:声称|认定|外推|写成|写|表示|证明|宣称|生成|输出)|"
+        r"不代表|不生成|不输出|无证据(?:表明|证明)"
+        r")"
+        r"[ \t`'\"“”‘’：:（）()\[\]【】]{0,12}$"
+    )
+    reversal = re.compile(
+        r"(?:而是|但是|但|却|不但|且|并|同时|所以|因此|故|从而|进而|"
+        r"否认|反驳|低估|夸大|确认|明确|事实|\bbut\b|\band\b|"
+        r"\btherefore\b|\bactually\b|\bconfirmed\b|\bfact\b)",
+        re.I,
+    )
+    while True:
+        index = text.find(term, offset)
+        if index < 0:
+            return False
+        prefix = text[max(0, index - 48) : index]
+        clause = re.split(r"[。！？；;，,\n]", prefix)[-1]
+        if reversal.search(clause) or not disclaimer.search(clause):
+            return True
+        offset = index + len(term)
+
+
 def unsupported_output_schema_paths(value: Any, path: str = "$") -> list[str]:
     """Return response-format-incompatible schema keyword paths."""
 
@@ -240,6 +269,12 @@ def static_validate(cases: list[dict]) -> None:
     absent = sorted(required_ids - set(ids))
     if absent:
         raise SystemExit("Missing required eval cases: " + ", ".join(absent))
+    cases_by_id = {case["id"]: case for case in cases}
+    for case_id in ("L01", "L02"):
+        if "pre_rule_competition_score" not in cases_by_id[case_id].get("prompt", ""):
+            raise SystemExit(
+                f"Case {case_id} must bind the controlled pre-rule competition baseline"
+            )
 
     for case in cases:
         prompt_errors = validate_prompt_inputs(case, tracked_paths)
@@ -1276,6 +1311,152 @@ def grade_rule_effects(
     return errors
 
 
+def _score_for(result: dict[str, Any], candidate_id: str, dimension: str) -> Any:
+    for candidate in result.get("recommended", []):
+        if isinstance(candidate, dict) and candidate.get("candidate_id") == candidate_id:
+            scores = candidate.get("scores")
+            return scores.get(dimension) if isinstance(scores, dict) else None
+    return None
+
+
+def _same_finite_number(left: Any, right: Any) -> bool:
+    return (
+        not isinstance(left, bool)
+        and isinstance(left, (int, float))
+        and math.isfinite(float(left))
+        and not isinstance(right, bool)
+        and isinstance(right, (int, float))
+        and math.isfinite(float(right))
+        and math.isclose(float(left), float(right), abs_tol=1e-9)
+    )
+
+
+def parse_controlled_competition_baselines(markdown: str) -> dict[str, float]:
+    """Parse the learned-transfer experiment baseline from its visible fixture."""
+
+    lines = markdown.splitlines()
+    for index, line in enumerate(lines):
+        if not line.lstrip().startswith("|"):
+            continue
+        header = [cell.strip().strip("`") for cell in line.strip().strip("|").split("|")]
+        if "id" not in header or "pre_rule_competition_score" not in header:
+            continue
+        id_index = header.index("id")
+        score_index = header.index("pre_rule_competition_score")
+        baselines: dict[str, float] = {}
+        for row in lines[index + 2 :]:
+            if not row.lstrip().startswith("|"):
+                break
+            cells = [cell.strip().strip("`") for cell in row.strip().strip("|").split("|")]
+            if max(id_index, score_index) >= len(cells):
+                raise ValueError("learned transfer fixture row is incomplete")
+            candidate_id = cells[id_index]
+            if not candidate_id or candidate_id in baselines:
+                raise ValueError("learned transfer fixture candidate IDs must be unique")
+            try:
+                score = float(cells[score_index])
+            except ValueError as exc:
+                raise ValueError("learned transfer fixture baseline must be numeric") from exc
+            if not math.isfinite(score) or not 0 <= score <= 5:
+                raise ValueError("learned transfer fixture baseline must be within 0..5")
+            baselines[candidate_id] = score
+        if not baselines:
+            raise ValueError("learned transfer fixture baseline table is empty")
+        return baselines
+    raise ValueError("learned transfer fixture baseline column is missing")
+
+
+def learned_effect_pair_invariant_errors(
+    proposed: dict[str, Any],
+    active: dict[str, Any],
+    controlled_baselines: dict[str, float],
+) -> list[str]:
+    """Bind L01's proposed baseline to L02's active before/after effects."""
+
+    errors: list[str] = []
+    if proposed.get("rule_effects") != []:
+        errors.append("L01 proposed result must have an empty rule_effects array")
+    effects = active.get("rule_effects")
+    if not isinstance(effects, list) or not effects:
+        errors.append("L02 active result must contain rule effects")
+        return errors
+
+    affected: set[tuple[str, str]] = set()
+    dimensions: set[str] = set()
+    for effect in effects:
+        if not isinstance(effect, dict):
+            continue
+        candidate_id = effect.get("candidate_id")
+        dimension = effect.get("dimension")
+        if not isinstance(candidate_id, str) or not isinstance(dimension, str):
+            continue
+        affected.add((candidate_id, dimension))
+        dimensions.add(dimension)
+        proposed_score = _score_for(proposed, candidate_id, dimension)
+        baseline_score = controlled_baselines.get(candidate_id)
+        if not _same_finite_number(proposed_score, baseline_score):
+            errors.append(
+                f"L01 {candidate_id}/{dimension} must equal the controlled fixture baseline"
+            )
+        if not _same_finite_number(effect.get("before"), baseline_score):
+            errors.append(
+                f"L02 {candidate_id}/{dimension} before must equal the controlled fixture baseline"
+            )
+        if not _same_finite_number(proposed_score, effect.get("before")):
+            errors.append(
+                f"L01 {candidate_id}/{dimension} must equal L02 effect.before"
+            )
+        active_score = _score_for(active, candidate_id, dimension)
+        if not _same_finite_number(active_score, effect.get("after")):
+            errors.append(
+                f"L02 {candidate_id}/{dimension} must equal its effect.after"
+            )
+
+    proposed_ids = {
+        item.get("candidate_id")
+        for item in proposed.get("recommended", [])
+        if isinstance(item, dict) and isinstance(item.get("candidate_id"), str)
+    }
+    active_ids = {
+        item.get("candidate_id")
+        for item in active.get("recommended", [])
+        if isinstance(item, dict) and isinstance(item.get("candidate_id"), str)
+    }
+    if proposed_ids != active_ids:
+        errors.append("L01/L02 recommended candidate sets must match")
+    if proposed_ids != set(controlled_baselines):
+        errors.append("L01/L02 candidate sets must equal the controlled fixture candidates")
+    affected_candidates_by_dimension: dict[str, set[str]] = {}
+    for candidate_id, dimension in affected:
+        affected_candidates_by_dimension.setdefault(dimension, set()).add(candidate_id)
+    for dimension in sorted(dimensions):
+        negative_controls = (proposed_ids & active_ids) - affected_candidates_by_dimension.get(
+            dimension, set()
+        )
+        if not negative_controls:
+            errors.append(f"L01/L02 require a negative control for {dimension}")
+    for candidate_id in sorted(proposed_ids & active_ids):
+        for dimension in sorted(dimensions):
+            if (candidate_id, dimension) in affected:
+                continue
+            proposed_score = _score_for(proposed, candidate_id, dimension)
+            active_score = _score_for(active, candidate_id, dimension)
+            baseline_score = controlled_baselines.get(candidate_id)
+            if not _same_finite_number(proposed_score, baseline_score):
+                errors.append(
+                    f"negative-control {candidate_id}/{dimension} must equal fixture baseline in L01"
+                )
+            if not _same_finite_number(active_score, baseline_score):
+                errors.append(
+                    f"negative-control {candidate_id}/{dimension} must equal fixture baseline in L02"
+                )
+            if not _same_finite_number(proposed_score, active_score):
+                errors.append(
+                    f"negative-control {candidate_id}/{dimension} changed across L01/L02"
+                )
+    return errors
+
+
 REPORT_EFFECT_COLUMNS = ("rule_id", "candidate_id", "dimension", "delta", "before", "after")
 REPORT_EFFECT_HEADER = "| rule_id | candidate_id | dimension | delta | before | after |"
 
@@ -1435,7 +1616,7 @@ def grade_case(
         if term not in combined:
             errors.append(f"required term missing: {term}")
     for term in expected["forbidden_terms"]:
-        if term in combined:
+        if forbidden_claim_present(combined, term):
             errors.append(f"forbidden term present: {term}")
     invoked_lower = [name.lower() for name in invoked_tools]
     for forbidden in expected.get("forbidden_tool_calls", []):
@@ -1726,6 +1907,55 @@ def execute_case_batch(
     return [results_by_id[case["id"]] for case in selected]
 
 
+def add_case_failure(
+    results: list[dict[str, Any]], run_root: Path, case_id: str, error: str
+) -> None:
+    result = next((item for item in results if item["case_id"] == case_id), None)
+    if result is None:
+        return
+    result["passed"] = False
+    if error not in result["errors"]:
+        result["errors"].append(error)
+    grade_path = run_root / case_id / "grade.json"
+    grade = (
+        load_json(grade_path)
+        if grade_path.is_file()
+        else {"passed": False, "errors": []}
+    )
+    grade["passed"] = False
+    if error not in grade["errors"]:
+        grade["errors"].append(error)
+    _write_json(grade_path, grade)
+
+
+def enforce_learned_effect_pair(
+    results: list[dict[str, Any]], run_root: Path
+) -> None:
+    by_id = {result["case_id"]: result for result in results}
+    if not {"L01", "L02"}.issubset(by_id):
+        return
+    if not by_id["L01"]["passed"] or not by_id["L02"]["passed"]:
+        return
+    try:
+        proposed = load_json(run_root / "L01" / "result.json")
+        active = load_json(run_root / "L02" / "result.json")
+        controlled_baselines = parse_controlled_competition_baselines(
+            (
+                ROOT / "references/demo-data/eval-learned-transfer-candidates.md"
+            ).read_text(encoding="utf-8")
+        )
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        pair_errors = [f"learned effect pair could not be loaded: {type(exc).__name__}"]
+    else:
+        pair_errors = learned_effect_pair_invariant_errors(
+            proposed, active, controlled_baselines
+        )
+    for pair_error in pair_errors:
+        error = "learned effect pair invariant: " + pair_error
+        add_case_failure(results, run_root, "L01", error)
+        add_case_failure(results, run_root, "L02", error)
+
+
 def mark_repository_integrity_failure(
     results: list[dict[str, Any]],
     run_root: Path,
@@ -1820,6 +2050,7 @@ def main() -> None:
                 ]
             else:
                 results = execute_case_batch(selected, args, run_root)
+                enforce_learned_effect_pair(results, run_root)
             try:
                 end_commit, end_clean = repository_state()
             except (Exception, SystemExit) as exc:

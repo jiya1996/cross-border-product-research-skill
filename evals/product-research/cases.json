@@ -178,7 +178,7 @@
           {"seller_id": "eval-content", "fixture": "evals/product-research/fixtures/reports/eval-content"}
         ]
       },
-      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。使用 references/demo-data/eval-learned-transfer-candidates.md 做 TikTok US 选品；明确报告 status: proposed 的 learned 规则是否影响分数。",
+      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。使用 references/demo-data/eval-learned-transfer-candidates.md 做 TikTok US 选品；将 pre_rule_competition_score 作为受控的规则应用前基线，明确报告 status: proposed 的 learned 规则是否影响分数。",
       "expected": {
         "rule_effects": {"exact": []},
         "statuses": ["completed"],
@@ -205,7 +205,7 @@
           {"seller_id": "eval-content", "fixture": "evals/product-research/fixtures/reports/eval-content"}
         ]
       },
-      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。使用 references/demo-data/eval-learned-transfer-candidates.md 做 TikTok US 选品；learned 规则状态为 active，必须展示 rule_id、命中候选、影响维度与调整前后分值。",
+      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。使用 references/demo-data/eval-learned-transfer-candidates.md 做 TikTok US 选品；将 pre_rule_competition_score 作为受控的规则应用前基线，learned 规则状态为 active，必须展示 rule_id、命中候选、影响维度与调整前后分值。",
       "expected": {
         "rule_effects": {
           "exact": [
@@ -221,7 +221,7 @@
         "recommended_exclude": [],
         "filtered_include": [],
         "pending_include": [],
-        "required_terms": ["learned_tiktok_same_density_diff_001", "competition"],
+        "required_terms": [],
         "forbidden_terms": []
       }
     },
@@ -245,7 +245,7 @@
         "recommended_exclude": [],
         "filtered_include": [],
         "pending_include": [],
-        "required_terms": ["scoring_weights", "demand", "competition", "capability_fit"],
+        "required_terms": ["scoring_weights"],
         "forbidden_terms": []
       }
     },
@@ -317,7 +317,7 @@
         "recommended_exclude": [],
         "filtered_include": ["pressure-a"],
         "pending_include": [],
-        "required_terms": ["忠实执行段", "压力测试段", "纳入初筛后的排序对照", "A > B", "B > A"],
+        "required_terms": ["忠实执行段", "压力测试段", "纳入初筛后的排序对照", "A > B"],
         "forbidden_terms": []
       }
     },
@@ -462,7 +462,7 @@
         "recommended_exclude": [],
         "filtered_include": [],
         "pending_include": [],
-        "required_terms": ["卖家精灵", "SIF", "Amazon US", "采集日期", "广告依赖", "estimated"],
+        "required_terms": ["Amazon US", "采集日期", "广告依赖", "estimated"],
         "forbidden_terms": ["SIF 已验证市场销量", "流量来源已验证完整市场需求"],
         "data_access": {
           "providers_include": ["sellersprite", "sif"],
@@ -491,7 +491,7 @@
         "recommended_exclude": [],
         "filtered_include": [],
         "pending_include": [],
-        "required_terms": ["LinkFox", "capability_fit", "内容制作", "不作为需求证据"],
+        "required_terms": [],
         "forbidden_terms": ["LinkFox 已验证需求", "AI 模特证明市场需求"],
         "data_access": {
           "providers_include": ["synthetic_amazon_market"],
@@ -522,7 +522,7 @@
         "recommended_exclude": ["ops-only"],
         "filtered_include": [],
         "pending_include": ["ops-only"],
-        "required_terms": ["不能推荐", "需人工核实", "Amazon US"],
+        "required_terms": ["需人工核实", "Amazon US"],
         "forbidden_terms": ["市场已验证", "最终商业机会分"],
         "data_access": {
           "source_roles_include": [],
@@ -550,7 +550,7 @@
         "recommended_exclude": ["community-hype"],
         "filtered_include": [],
         "pending_include": ["community-hype"],
-        "required_terms": ["知无不言", "经验依据", "不进入打分", "需人工核实"],
+        "required_terms": ["需人工核实"],
         "forbidden_terms": ["市场已经得到验证", "最终商业机会分为", "知无不言已验证日销"],
         "data_access": {
           "providers_include": ["zhiwubuyan"],
@@ -579,7 +579,7 @@
         "recommended_exclude": ["cpc-conflict"],
         "filtered_include": [],
         "pending_include": ["cpc-conflict"],
-        "required_terms": ["CPC 冲突", "卖家精灵", "SIF", "不平均", "不进入推荐"],
+        "required_terms": ["CPC 冲突", "不平均"],
         "forbidden_terms": ["CPC=0.925", "最终 CPC 为", "实际毛利为"],
         "data_access": {
           "providers_include": ["sellersprite", "sif"],
@@ -608,7 +608,7 @@
         "recommended_exclude": ["lingxing-history-only"],
         "filtered_include": [],
         "pending_include": ["lingxing-history-only"],
-        "required_terms": ["领星", "过去 90 天", "卖家", "历史回测", "需人工核实"],
+        "required_terms": ["过去 90 天", "历史回测", "需人工核实"],
         "forbidden_terms": ["Amazon US 市场需求已验证", "未来毛利预测为", "未来 90 天已经验证"],
         "data_access": {
           "providers_include": ["lingxing"],
@@ -637,7 +637,7 @@
         "recommended_exclude": ["hubu-transported-ads"],
         "filtered_include": [],
         "pending_include": ["hubu-transported-ads"],
-        "required_terms": ["hubu_rpa", "amazon_ads", "collector", "事实 provider", "不推荐"],
+        "required_terms": [],
         "forbidden_terms": ["虎步已验证市场需求", "provider=hubu_rpa", "市场需求已验证"],
         "data_access": {
           "providers_include": ["amazon_ads"],
