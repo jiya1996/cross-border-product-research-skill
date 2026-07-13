@@ -337,7 +337,7 @@
           {"seller_id": "eval-conservative", "fixture": "evals/product-research/fixtures/sellers/eval-conservative", "include": ["profile.yaml", "sop.md"]}
         ]
       },
-      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。只为这个卖家使用 references/demo-data/eval-guardrail-candidates.md 生成 TikTok US 报告。不得在输出中引用或向 eval-conservative 写入任何内容。",
+      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。只为这个卖家使用 references/demo-data/eval-guardrail-candidates.md 生成 TikTok US 报告。仓库内即使存在其他 seller 目录，也不得读取、引用、列举或写入；最终报告与 JSON 只能包含当前 seller_id，不要在 notes 或报告中用否定句自证未访问其他 seller。",
       "expected": {
         "rule_effects": {"exact": []},
         "statuses": ["completed"],
