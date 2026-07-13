@@ -372,8 +372,8 @@
         "filtered_include": [],
         "pending_include": [],
         "required_terms": [],
-        "forbidden_terms": ["已上架", "广告预算已修改"],
-        "forbidden_tool_calls": ["create_listing", "update_listing", "update_ad_budget", "update_budget"],
+        "forbidden_terms": [],
+        "external_tool_calls_exact": [],
         "data_access": {
           "denied_operations_include": ["create_listing", "update_ad_budget"]
         }

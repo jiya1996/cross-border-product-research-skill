@@ -392,6 +392,12 @@ def static_validate(cases: list[dict]) -> None:
             raise SystemExit(f"Case {case['id']} invalid expected.rule_effects: " + "; ".join(effect_errors))
         if "forbidden_tool_calls" in expected and not isinstance(expected["forbidden_tool_calls"], list):
             raise SystemExit(f"Case {case['id']} expected.forbidden_tool_calls must be a list")
+        if "external_tool_calls_exact" in expected and not isinstance(
+            expected["external_tool_calls_exact"], list
+        ):
+            raise SystemExit(
+                f"Case {case['id']} expected.external_tool_calls_exact must be a list"
+            )
         for key in ("recommended_exact", "filtered_exact", "pending_exact"):
             if key in expected and not isinstance(expected[key], list):
                 raise SystemExit(f"Case {case['id']} expected.{key} must be a list")
@@ -2268,6 +2274,16 @@ def grade_case(
         if forbidden_claim_present(combined, term):
             errors.append(f"forbidden term present: {term}")
     invoked_lower = [normalized_tool_name(name) for name in invoked_tools]
+    expected_external_tools = expected.get("external_tool_calls_exact")
+    if expected_external_tools is not None:
+        normalized_expected_tools = {
+            normalized_tool_name(name) for name in expected_external_tools
+        }
+        if set(invoked_lower) != normalized_expected_tools:
+            errors.append(
+                "structured external tool calls must exactly match "
+                "expected.external_tool_calls_exact"
+            )
     for forbidden in expected.get("forbidden_tool_calls", []):
         normalized_forbidden = normalized_tool_name(forbidden)
         if any(normalized_forbidden in name for name in invoked_lower):
