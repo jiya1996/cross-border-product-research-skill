@@ -7,6 +7,7 @@ import argparse
 import concurrent.futures
 import datetime as dt
 import hashlib
+import html
 import json
 import math
 import os
@@ -16,6 +17,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+import unicodedata
 from collections import Counter
 from pathlib import Path
 from pathlib import PurePosixPath
@@ -260,6 +262,7 @@ def static_validate(cases: list[dict]) -> None:
         ROOT / "references" / "demo-data" / "eval-tool-role-boundaries.json",
         ROOT / "references" / "demo-data" / "eval-learned-transfer-candidates.md",
         ROOT / "references" / "demo-data" / "eval-platform-comparison.md",
+        ROOT / "references" / "demo-data" / "eval-platform-report-contract.md",
         ROOT / "scripts" / "check_data_access.py",
         ROOT / "scripts" / "reset_demo.py",
     ]
@@ -336,6 +339,9 @@ def static_validate(cases: list[dict]) -> None:
         platform_hard_constraints = parse_controlled_hard_constraints(
             platform_markdown, id_field="candidate_id"
         )
+        platform_oracle = parse_controlled_platform_oracle(platform_markdown)
+        platform_metadata = controlled_platform_fixture_metadata()
+        platform_weights = controlled_profile_scoring_weights()
     except ValueError as exc:
         raise SystemExit(f"Invalid controlled platform fixture: {exc}") from exc
     if set(platform_hard_constraints) != {"platform-search", "platform-visual"}:
@@ -352,6 +358,124 @@ def static_validate(cases: list[dict]) -> None:
         if control["status"] != "pass_synthetic":
             raise SystemExit(
                 f"Controlled platform {candidate_id} hard_constraint_status must be pass_synthetic"
+            )
+    if set(platform_oracle["candidates"]) != set(platform_hard_constraints):
+        raise SystemExit("Controlled platform oracle and constraints candidate sets differ")
+    metadata_row = (
+        f"| {platform_metadata[0]} | {platform_metadata[1]} | "
+        f"{json.dumps(platform_metadata[2], ensure_ascii=False, separators=(',', ':'))} | "
+        f"{json.dumps(platform_metadata[3], ensure_ascii=False, separators=(',', ':'))} | "
+        f"{platform_metadata[4]} |"
+    )
+    weights_row = "| " + " | ".join(
+        f"{weight:.2f}" for weight in platform_weights
+    ) + " |"
+    signal_labels = {
+        "amazon": "搜索|评论|CPC",
+        "tiktok": "视觉|互动|同款密度|物流",
+    }
+    report_contract_path = "references/demo-data/eval-platform-report-contract.md"
+    report_contract = (ROOT / report_contract_path).read_text(encoding="utf-8")
+    for case_id, platform in (("P01A", "amazon"), ("P01B", "tiktok")):
+        prompt = cases_by_id[case_id]["prompt"]
+        platform_selectors = {
+            "P01A": ("P01A / Amazon", "Amazon US"),
+            "P01B": ("P01B / TikTok", "TikTok US"),
+        }[case_id] + (f"{platform}_rank",) + tuple(
+            f"{platform}_{dimension}_score"
+            for dimension in ("demand", "competition", "capability_fit", "risk")
+        )
+        if report_contract_path not in prompt or any(
+            selector not in prompt for selector in platform_selectors
+        ):
+            raise SystemExit(
+                f"Case {case_id} must select its platform report contract section"
+            )
+        audit_contract = prompt + "\n" + report_contract
+        ordered_routes = sorted(
+            (
+                (candidate_id, routes[platform])
+                for candidate_id, routes in platform_oracle["candidates"].items()
+            ),
+            key=lambda item: item[1]["rank"],
+        )
+        score_rows = tuple(
+            "| "
+            + " | ".join(
+                (
+                    candidate_id,
+                    str(route["rank"]),
+                    f"{route['scores']['demand']:.1f}",
+                    f"{route['scores']['competition']:.1f}",
+                    "N/A",
+                    f"{route['scores']['capability_fit']:.1f}",
+                    f"{route['scores']['risk']:.1f}",
+                    "N/A",
+                )
+            )
+            + " |"
+            for candidate_id, route in ordered_routes
+        )
+        attribution_rows = tuple(
+            "| "
+            + " | ".join(
+                (
+                    candidate_id,
+                    json.dumps(
+                        CONTROLLED_ATTRIBUTION_REFS[platform][candidate_id]["fit_refs"],
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                    ),
+                    json.dumps(
+                        CONTROLLED_ATTRIBUTION_REFS[platform][candidate_id]["misfit_refs"],
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                    ),
+                    json.dumps(
+                        CONTROLLED_RISK_CODES,
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                    ),
+                    json.dumps(
+                        CONTROLLED_NEXT_VERIFICATION_CODES[platform],
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                    ),
+                )
+            )
+            + " |"
+            for candidate_id, _route in ordered_routes
+        )
+        data_access_row = (
+            "| synthetic_demo | repository_fixture | eval_platform_comparison | "
+            f"direct_market_data | {json.dumps(CONTROLLED_PLATFORM_SOURCE['read_operations'], separators=(',', ':'))} "
+            "| [] | [] | [] |"
+        )
+        required_literals = (
+            data_access_row,
+            metadata_row,
+            weights_row,
+            f"- platform_adapter: {platform}",
+            f"- ranking_basis: {platform_oracle['bases'][platform]}",
+            f"- platform_signal_labels: {signal_labels[platform]}",
+            f"{platform}_rank",
+            f"{platform}_demand_score",
+            "denied_operations=[]",
+            CONTROLLED_ATTRIBUTION_HEADER,
+            "- live_market_data_verified: false",
+            "- margin_status: unknown_missing_complete_cost",
+            "- total_score_status: not_computed_missing_margin",
+            "- 真实市场数据链路未验证",
+            "\n".join(score_rows),
+            "\n".join(attribution_rows),
+        )
+        missing_literals = [
+            literal for literal in required_literals if literal not in audit_contract
+        ]
+        if missing_literals:
+            raise SystemExit(
+                f"Case {case_id} controlled audit prompt is stale: "
+                + ", ".join(missing_literals)
             )
 
     community_fixture = (
@@ -1474,9 +1598,11 @@ def controlled_effect_result_errors(
     """Validate the hypothesis-only four-dimension output contract for L01/L02."""
 
     errors: list[str] = []
+    recommended_items = result.get("recommended", [])
+    recommended_items = recommended_items if isinstance(recommended_items, list) else []
     recommended = {
         item.get("candidate_id"): item
-        for item in result.get("recommended", [])
+        for item in recommended_items
         if isinstance(item, dict) and isinstance(item.get("candidate_id"), str)
     }
     for candidate_id in sorted(controlled_candidate_ids):
@@ -1516,16 +1642,27 @@ def controlled_effect_result_errors(
     return errors
 
 
+def strict_visible_fixture_text(markdown: str) -> str:
+    """Reject raw HTML and return only visible non-code Markdown fixture text."""
+
+    uncommented = re.sub(r"<!--(?:.*?-->|.*\Z)", "", markdown, flags=re.S)
+    if re.search(r"<\s*/?\s*[A-Za-z][^>]*>", html.unescape(uncommented), re.I):
+        raise ValueError("controlled fixture must not contain raw HTML")
+    return visible_markdown_text(markdown)
+
+
 def parse_controlled_competition_baselines(markdown: str) -> dict[str, float]:
     """Parse the learned-transfer experiment baseline from its visible fixture."""
 
-    lines = markdown.splitlines()
+    lines = strict_visible_fixture_text(markdown).splitlines()
     for index, line in enumerate(lines):
         if not line.lstrip().startswith("|"):
             continue
         header = [cell.strip().strip("`") for cell in line.strip().strip("|").split("|")]
         if "id" not in header or "pre_rule_competition_score" not in header:
             continue
+        if len(header) != len(set(header)):
+            raise ValueError("learned transfer fixture headers must be unique")
         id_index = header.index("id")
         score_index = header.index("pre_rule_competition_score")
         baselines: dict[str, float] = {}
@@ -1562,13 +1699,26 @@ def parse_controlled_hard_constraints(
         "controlled_cash_cycle_days",
         "hard_constraint_status",
     )
-    lines = markdown.splitlines()
+    lines = strict_visible_fixture_text(markdown).splitlines()
+    parsed_tables: list[dict[str, dict[str, Any]]] = []
     for index, line in enumerate(lines):
         if not line.lstrip().startswith("|"):
             continue
         header = [cell.strip().strip("`") for cell in line.strip().strip("|").split("|")]
         if not set(required).issubset(header):
             continue
+        if len(header) != len(set(header)):
+            raise ValueError("controlled hard-constraint headers must be unique")
+        if index + 1 >= len(lines) or not lines[index + 1].lstrip().startswith("|"):
+            raise ValueError("controlled hard-constraint table separator is missing")
+        separators = [
+            cell.strip()
+            for cell in lines[index + 1].strip().strip("|").split("|")
+        ]
+        if len(separators) != len(header) or not all(
+            re.fullmatch(r":?-{3,}:?", cell) for cell in separators
+        ):
+            raise ValueError("controlled hard-constraint table separator is invalid")
         positions = {field: header.index(field) for field in required}
         controls: dict[str, dict[str, Any]] = {}
         for row in lines[index + 2 :]:
@@ -1594,24 +1744,116 @@ def parse_controlled_hard_constraints(
             }
         if not controls:
             raise ValueError("learned transfer hard-constraint table is empty")
-        return controls
-    raise ValueError("controlled hard-constraint columns are missing")
+        parsed_tables.append(controls)
+    if len(parsed_tables) != 1:
+        raise ValueError("controlled hard-constraint table must be unique and visible")
+    return parsed_tables[0]
+
+
+def parse_controlled_platform_oracle(markdown: str) -> dict[str, Any]:
+    """Parse the unique visible platform-routing oracle from the synthetic fixture."""
+
+    visible = strict_visible_fixture_text(markdown)
+    bases: dict[str, str] = {}
+    for platform in ("amazon", "tiktok"):
+        matches = re.findall(
+            rf"controlled_ranking_basis\.{platform}=([a-z0-9_]+)", visible
+        )
+        if len(matches) != 1:
+            raise ValueError(f"controlled {platform} ranking basis must be unique")
+        bases[platform] = matches[0]
+    dimensions = ("demand", "competition", "capability_fit", "risk")
+    required = {"candidate_id"}
+    for platform in bases:
+        required.add(f"{platform}_rank")
+        required.update(f"{platform}_{dimension}_score" for dimension in dimensions)
+    parsed: list[dict[str, dict[str, Any]]] = []
+    lines = visible.splitlines()
+    for index, line in enumerate(lines):
+        if not line.lstrip().startswith("|"):
+            continue
+        header = [
+            cell.strip().strip("`")
+            for cell in line.strip().strip("|").split("|")
+        ]
+        if not required.issubset(header):
+            continue
+        if len(header) != len(set(header)):
+            raise ValueError("controlled platform oracle headers must be unique")
+        if index + 1 >= len(lines) or not lines[index + 1].lstrip().startswith("|"):
+            raise ValueError("controlled platform oracle separator is missing")
+        separators = [
+            cell.strip()
+            for cell in lines[index + 1].strip().strip("|").split("|")
+        ]
+        if len(separators) != len(header) or not all(
+            re.fullmatch(r":?-{3,}:?", cell) for cell in separators
+        ):
+            raise ValueError("controlled platform oracle separator is invalid")
+        positions = {field: header.index(field) for field in required}
+        candidates: dict[str, dict[str, Any]] = {}
+        for row in lines[index + 2 :]:
+            if not row.lstrip().startswith("|"):
+                break
+            cells = [
+                cell.strip().strip("`")
+                for cell in row.strip().strip("|").split("|")
+            ]
+            if max(positions.values()) >= len(cells):
+                raise ValueError("controlled platform oracle row is incomplete")
+            candidate_id = cells[positions["candidate_id"]]
+            if not candidate_id or candidate_id in candidates:
+                raise ValueError("controlled platform oracle IDs must be unique")
+            routes: dict[str, Any] = {}
+            for platform in bases:
+                try:
+                    rank = int(cells[positions[f"{platform}_rank"]])
+                    scores = {
+                        dimension: float(
+                            cells[positions[f"{platform}_{dimension}_score"]]
+                        )
+                        for dimension in dimensions
+                    }
+                except ValueError as exc:
+                    raise ValueError(
+                        "controlled platform oracle rank/scores must be numeric"
+                    ) from exc
+                if rank < 1 or any(
+                    not math.isfinite(score) or not 0 <= score <= 5
+                    for score in scores.values()
+                ):
+                    raise ValueError("controlled platform oracle values are invalid")
+                routes[platform] = {"rank": rank, "scores": scores}
+            candidates[candidate_id] = routes
+        if not candidates:
+            raise ValueError("controlled platform oracle table is empty")
+        parsed.append(candidates)
+    if len(parsed) != 1:
+        raise ValueError("controlled platform oracle table must be unique and visible")
+    candidates = parsed[0]
+    for platform in bases:
+        ranks = sorted(route[platform]["rank"] for route in candidates.values())
+        if ranks != list(range(1, len(candidates) + 1)):
+            raise ValueError(f"controlled {platform} ranks must be consecutive")
+    return {"bases": bases, "candidates": candidates}
 
 
 def controlled_platform_result_errors(
     case_id: str,
     result: dict[str, Any],
-    controlled_candidate_ids: set[str],
-    expected_top: str,
+    expected_route: dict[str, Any],
 ) -> list[str]:
     """Validate one side of the controlled Amazon/TikTok routing experiment."""
 
-    errors = controlled_effect_result_errors(
-        case_id, result, controlled_candidate_ids
-    )
+    controlled_candidate_ids = set(expected_route)
+    errors = controlled_effect_result_errors(case_id, result, controlled_candidate_ids)
+    platform = {"P01A": "amazon", "P01B": "tiktok"}.get(case_id)
+    expected_references = CONTROLLED_ATTRIBUTION_REFS.get(platform or "", {})
+    recommended_items = result.get("recommended", [])
+    recommended_items = recommended_items if isinstance(recommended_items, list) else []
     recommended = {
         item.get("candidate_id"): item
-        for item in result.get("recommended", [])
+        for item in recommended_items
         if isinstance(item, dict) and isinstance(item.get("candidate_id"), str)
     }
     if set(recommended) != controlled_candidate_ids:
@@ -1624,8 +1866,43 @@ def controlled_platform_result_errors(
         range(1, len(controlled_candidate_ids) + 1)
     ):
         errors.append(f"{case_id} ranks must be the exact consecutive controlled ordering")
-    if expected_top not in recommended or recommended[expected_top].get("rank") != 1:
-        errors.append(f"{case_id} expected controlled top candidate {expected_top}")
+    ordered_ranks = [
+        item.get("rank") for item in recommended_items if isinstance(item, dict)
+    ]
+    if not all(
+        isinstance(rank, int) and not isinstance(rank, bool) for rank in ordered_ranks
+    ) or ordered_ranks != sorted(ordered_ranks):
+        errors.append(f"{case_id} recommended rows must be ordered by rank")
+    for candidate_id, expected in expected_route.items():
+        actual = recommended.get(candidate_id)
+        if not isinstance(actual, dict):
+            continue
+        if actual.get("rank") != expected.get("rank"):
+            errors.append(f"{case_id} {candidate_id} rank must match platform oracle")
+        actual_scores = actual.get("scores")
+        if not isinstance(actual_scores, dict):
+            continue
+        for reference_field in ("fit_refs", "misfit_refs"):
+            references = actual.get(reference_field)
+            expected_reference_list = expected_references.get(candidate_id, {}).get(
+                reference_field
+            )
+            if references != expected_reference_list:
+                errors.append(
+                    f"{case_id} {candidate_id} {reference_field} must match controlled seller references"
+                )
+        for dimension, expected_score in expected.get("scores", {}).items():
+            actual_score = actual_scores.get(dimension)
+            exact_score = (
+                isinstance(actual_score, (int, float))
+                and not isinstance(actual_score, bool)
+                and math.isfinite(float(actual_score))
+                and float(actual_score) == float(expected_score)
+            )
+            if not exact_score:
+                errors.append(
+                    f"{case_id} {candidate_id}/{dimension} must match platform oracle"
+                )
     if result.get("filtered") != []:
         errors.append(f"{case_id} controlled platform filtered must be empty")
     if result.get("blocked_pending_data") != []:
@@ -1637,17 +1914,14 @@ def controlled_platform_result_errors(
     if access.get("mode") != "synthetic_demo":
         errors.append(f"{case_id} controlled platform mode must be synthetic_demo")
     sources = access.get("sources_used")
-    fixture_path = "references/demo-data/eval-platform-comparison.md"
-    expected_source = {
-        "provider": "repository_fixture",
-        "provider_variant": "eval_platform_comparison",
-        "source_role": "direct_market_data",
-        "read_operations": [f"read {fixture_path}"],
-    }
-    if sources != [expected_source]:
+    if sources != [CONTROLLED_PLATFORM_SOURCE]:
         errors.append(f"{case_id} controlled platform fixture provenance must be exact")
     if access.get("collectors_used") != []:
         errors.append(f"{case_id} controlled platform collectors_used must be empty")
+    if access.get("transformations_used") != []:
+        errors.append(f"{case_id} controlled platform transformations_used must be empty")
+    if access.get("denied_operations") != CONTROLLED_PLATFORM_DENIED_OPERATIONS:
+        errors.append(f"{case_id} controlled platform denied_operations must be exact")
     return errors
 
 
@@ -1820,6 +2094,128 @@ REPORT_CANDIDATE_COLUMNS = (
 REPORT_CANDIDATE_HEADER = (
     "| candidate_id | rank | demand | competition | margin | capability_fit | risk | total_score |"
 )
+CONTROLLED_PLATFORM_FIXTURE_PATH = (
+    "references/demo-data/eval-platform-comparison.md"
+)
+CONTROLLED_PLATFORM_SOURCE = {
+    "provider": "repository_fixture",
+    "provider_variant": "eval_platform_comparison",
+    "source_role": "direct_market_data",
+    "read_operations": [f"read {CONTROLLED_PLATFORM_FIXTURE_PATH}"],
+}
+CONTROLLED_PLATFORM_DENIED_OPERATIONS: list[str] = []
+CONTROLLED_DATA_ACCESS_COLUMNS = (
+    "mode",
+    "provider",
+    "provider_variant",
+    "source_role",
+    "read_operations",
+    "collectors_used",
+    "transformations_used",
+    "denied_operations",
+)
+CONTROLLED_DATA_ACCESS_HEADER = (
+    "| mode | provider | provider_variant | source_role | read_operations | "
+    "collectors_used | transformations_used | denied_operations |"
+)
+CONTROLLED_FIXTURE_METADATA_COLUMNS = (
+    "collection_date",
+    "sample_boundary",
+    "candidate_ids",
+    "known_gaps",
+    "fixture_sha256",
+)
+CONTROLLED_FIXTURE_METADATA_HEADER = (
+    "| collection_date | sample_boundary | candidate_ids | known_gaps | fixture_sha256 |"
+)
+CONTROLLED_SAMPLE_BOUNDARY = "controlled_fixture_all_rows"
+CONTROLLED_KNOWN_GAPS = ["complete_unit_cost", "live_market_validation"]
+CONTROLLED_SCORING_DIMENSIONS = (
+    "demand",
+    "competition",
+    "margin",
+    "capability_fit",
+    "risk",
+)
+CONTROLLED_SCORING_HEADER = (
+    "| demand | competition | margin | capability_fit | risk |"
+)
+CONTROLLED_PROFILE_FIXTURE_PATH = (
+    "evals/product-research/fixtures/sellers/eval-content/profile.yaml"
+)
+CONTROLLED_ATTRIBUTION_COLUMNS = (
+    "candidate_id",
+    "为什么适合你",
+    "为什么不适合你",
+    "主要风险",
+    "下一步最小验证",
+)
+CONTROLLED_ATTRIBUTION_HEADER = (
+    "| candidate_id | 为什么适合你 | 为什么不适合你 | 主要风险 | 下一步最小验证 |"
+)
+CONTROLLED_RISK_CODES = ["complete_unit_cost", "live_market_validation"]
+CONTROLLED_NEXT_VERIFICATION_CODES = {
+    "amazon": ["complete_cost", "amazon_search_review_cpc", "compliance"],
+    "tiktok": [
+        "complete_cost",
+        "tiktok_visual_interaction_logistics",
+        "compliance",
+    ],
+}
+CONTROLLED_ATTRIBUTION_REFS = {
+    "amazon": {
+        "platform-search": {
+            "fit_refs": [
+                "profile.constraints.capital_per_sku_max",
+                "profile.constraints.cash_cycle_tolerance_days",
+                "profile.capabilities.supply_chain",
+                "profile.preferences.review_moat_max",
+            ],
+            "misfit_refs": [
+                "profile.capabilities.content_skill",
+                "profile.capabilities.ad_skill",
+            ],
+        },
+        "platform-visual": {
+            "fit_refs": [
+                "profile.constraints.capital_per_sku_max",
+                "profile.constraints.cash_cycle_tolerance_days",
+                "profile.capabilities.supply_chain",
+                "profile.capabilities.content_skill",
+                "profile.preferences.product_style",
+            ],
+            "misfit_refs": [
+                "profile.capabilities.ad_skill",
+                "profile.preferences.competition_tolerance",
+            ],
+        },
+    },
+    "tiktok": {
+        "platform-visual": {
+            "fit_refs": [
+                "profile.capabilities.content_skill",
+                "profile.capabilities.supply_chain",
+                "profile.preferences.product_style",
+            ],
+            "misfit_refs": [
+                "profile.preferences.competition_tolerance",
+                "profile.capabilities.team_size",
+                "profile.preferences.margin_floor_pct",
+            ],
+        },
+        "platform-search": {
+            "fit_refs": [
+                "profile.constraints.logistics_modes",
+                "profile.capabilities.supply_chain",
+                "profile.preferences.risk_appetite",
+            ],
+            "misfit_refs": [
+                "profile.capabilities.content_skill",
+                "profile.preferences.competition_tolerance",
+            ],
+        },
+    },
+}
 
 
 def _markdown_cells(line: str) -> list[str]:
@@ -1860,6 +2256,64 @@ def visible_markdown_text(markdown: str) -> str:
             fence_char = None
             fence_length = 0
     return "\n".join(visible)
+
+
+def markdown_code_claim_text(markdown: str) -> str:
+    """Return visible fenced and indented code bodies for factual-claim scans."""
+
+    markdown = re.sub(r"<!--(?:.*?-->|.*\Z)", "", markdown, flags=re.S)
+    claims: list[str] = []
+    fence_char: str | None = None
+    fence_length = 0
+    for line in markdown.splitlines():
+        fence = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line)
+        if fence_char is None:
+            if fence:
+                fence_char = fence.group(1)[0]
+                fence_length = len(fence.group(1))
+            elif line.startswith("    "):
+                claims.append(line[4:])
+            elif line.startswith("\t"):
+                claims.append(line[1:])
+            continue
+        if (
+            fence
+            and fence.group(1)[0] == fence_char
+            and len(fence.group(1)) >= fence_length
+            and not fence.group(2).strip()
+        ):
+            fence_char = None
+            fence_length = 0
+            continue
+        claims.append(line)
+    return "\n".join(claims)
+
+
+def normalize_structural_surface(text: str) -> str:
+    """Normalize Unicode/HTML without changing Markdown block structure."""
+
+    text = html.unescape(text)
+    text = re.sub(r"</?[A-Za-z][^>]*>", "", text)
+    text = unicodedata.normalize("NFKC", text)
+    return "".join(
+        character
+        for character in text
+        if unicodedata.category(character) not in {"Cf", "Mn"}
+    )
+
+
+def normalize_claim_surface(text: str) -> str:
+    """Expose Markdown/Unicode obfuscation while preserving claim semantics."""
+
+    text = normalize_structural_surface(text)
+    text = re.sub(
+        r"\\([!\"#$%&'()*+,\-./:;<=>?@\[\]\\^_`{|}~])", r"\1", text
+    )
+    text = re.sub(r"!?\[([^\]]*)\]\([^)]+\)", r"\1", text)
+    text = re.sub(r"!?\[([^\]]*)\]\[[^\]]*\]", r"\1", text)
+    text = re.sub(r"!?\[([^\]]+)\]", r"\1", text)
+    text = re.sub(r"[*~`]", "", text)
+    return re.sub(r"(?<!\w)_{1,3}|_{1,3}(?!\w)", "", text)
 
 
 def grade_report_rule_effects(report_text: str, actual: Any) -> list[str]:
@@ -2026,54 +2480,539 @@ def grade_report_candidate_scores(report_text: str, recommended: Any) -> list[st
             )
     if not found_header:
         errors.append(f"report missing exact candidate table header: {REPORT_CANDIDATE_HEADER}")
-    if Counter(report_rows) != Counter(expected_rows):
-        errors.append("report candidate rows must exactly match result.recommended")
+    if report_rows != expected_rows:
+        errors.append("report candidate rows must exactly match ordered result.recommended")
     return errors
 
 
-def controlled_platform_report_errors(report_text: str, recommended: Any) -> list[str]:
-    """Keep controlled provenance and unknown commercial fields visible in the report."""
+def controlled_platform_fixture_metadata() -> tuple[
+    str, str, list[str], list[str], str
+]:
+    """Derive the publishable provenance metadata from the controlled fixture."""
 
-    report_text = visible_markdown_text(report_text)
-    errors = grade_report_candidate_scores(report_text, recommended)
-    for required in (
-        "- data_access.mode: synthetic_demo",
-        "- controlled_source: references/demo-data/eval-platform-comparison.md",
-        "- live_market_data_verified: false",
-        "真实市场数据链路未验证",
+    fixture_path = ROOT / CONTROLLED_PLATFORM_FIXTURE_PATH
+    fixture_bytes = fixture_path.read_bytes()
+    fixture_text = fixture_bytes.decode("utf-8")
+    visible_fixture = strict_visible_fixture_text(fixture_text)
+    dates = re.findall(r"采集日期\s*(\d{4}-\d{2}-\d{2})", visible_fixture)
+    if len(dates) != 1:
+        raise ValueError("controlled platform fixture must declare one collection date")
+    controls = parse_controlled_hard_constraints(
+        fixture_text, id_field="candidate_id"
+    )
+    candidate_ids = sorted(controls)
+    if len(candidate_ids) != len(set(candidate_ids)):
+        raise ValueError("controlled platform fixture candidate IDs must be unique")
+    if (
+        "不是真实市场" not in visible_fixture
+        or "不提供完整单位成本" not in visible_fixture
     ):
-        if required not in report_text:
-            errors.append(f"controlled platform report missing disclosure: {required}")
-    metric = re.compile(
-        r"(?:"
-        r"(?:实际(?:测算)?|真实|最终|完整)(?:测算)?(?:毛利|利润)(?:率)?|"
-        r"(?:(?:完整|最终)(?:商业)?|商业)(?:测算)?总分|"
-        r"(?:已知成本口径|完整成本口径|预估|预计|估算)(?:毛利|利润)(?:率)?|"
-        r"(?<![\w])total_score(?![\w])|"
-        r"(?<![\w])(?:actual|real|final)\s+(?:margin|profit)(?![\w])"
-        r")",
+        raise ValueError("controlled platform fixture gap declarations are incomplete")
+    oracle = parse_controlled_platform_oracle(fixture_text)
+    if set(candidate_ids) != set(oracle["candidates"]):
+        raise ValueError("controlled platform fixture tables disagree on candidate IDs")
+    return (
+        dates[0],
+        CONTROLLED_SAMPLE_BOUNDARY,
+        candidate_ids,
+        list(CONTROLLED_KNOWN_GAPS),
+        hashlib.sha256(fixture_bytes).hexdigest(),
+    )
+
+
+def controlled_profile_scoring_weights() -> tuple[float, ...]:
+    """Read the exact scoring-weight map from the controlled seller fixture."""
+
+    profile_text = (ROOT / CONTROLLED_PROFILE_FIXTURE_PATH).read_text(
+        encoding="utf-8"
+    )
+    lines = profile_text.splitlines()
+    preferences = [
+        index for index, line in enumerate(lines) if line == "preferences:"
+    ]
+    if len(preferences) != 1:
+        raise ValueError("controlled profile must contain one preferences map")
+    preference_end = len(lines)
+    for index in range(preferences[0] + 1, len(lines)):
+        line = lines[index]
+        if line and not line.startswith(" "):
+            preference_end = index
+            break
+    starts = [
+        index
+        for index, line in enumerate(lines[preferences[0] + 1 : preference_end], preferences[0] + 1)
+        if line == "  scoring_weights:"
+    ]
+    if len(starts) != 1:
+        raise ValueError("controlled profile must contain one scoring_weights map")
+    weights: dict[str, float] = {}
+    for line in lines[starts[0] + 1 :]:
+        if not line.strip():
+            continue
+        indent = len(line) - len(line.lstrip(" "))
+        if indent <= 2:
+            break
+        match = re.fullmatch(r"    ([a-z_]+):\s*(\S+)\s*", line)
+        if not match or match.group(1) in weights:
+            raise ValueError("controlled scoring_weights map is malformed")
+        try:
+            value = float(match.group(2))
+        except ValueError as exc:
+            raise ValueError("controlled scoring weight must be numeric") from exc
+        if not math.isfinite(value) or value < 0 or value > 1:
+            raise ValueError("controlled scoring weight is outside 0..1")
+        weights[match.group(1)] = value
+    if tuple(weights) != CONTROLLED_SCORING_DIMENSIONS:
+        raise ValueError("controlled scoring_weights dimensions must be exact")
+    values = tuple(weights[dimension] for dimension in CONTROLLED_SCORING_DIMENSIONS)
+    if not math.isclose(sum(values), 1.0, rel_tol=0.0, abs_tol=1e-9):
+        raise ValueError("controlled scoring_weights must sum to 1.0")
+    return values
+
+
+def controlled_platform_report_errors(report_text: str, result: Any) -> list[str]:
+    """Bind the controlled report's visible fact surface to structured output."""
+
+    original_report_text = report_text
+    uncommented = re.sub(
+        r"<!--(?:.*?-->|.*\Z)", "", original_report_text, flags=re.S
+    )
+    raw_html_present = bool(
+        re.search(
+            r"<\s*/?\s*[A-Za-z][^>]*>", html.unescape(uncommented), re.I
+        )
+    )
+    code_claims = markdown_code_claim_text(original_report_text)
+    structural_report_text = normalize_structural_surface(
+        visible_markdown_text(original_report_text)
+    )
+
+    result = result if isinstance(result, dict) else {}
+    recommended = result.get("recommended")
+    data_access = result.get("data_access")
+    errors = grade_report_candidate_scores(structural_report_text, recommended)
+    if raw_html_present:
+        errors.append("controlled platform report must not contain raw HTML")
+
+    try:
+        platform_oracle = parse_controlled_platform_oracle(
+            (ROOT / CONTROLLED_PLATFORM_FIXTURE_PATH).read_text(encoding="utf-8")
+        )
+        expected_platform = result.get("platform_adapter")
+        expected_basis = platform_oracle["bases"].get(expected_platform)
+        if expected_basis is None:
+            raise ValueError("controlled report platform has no ranking basis")
+        expected_signal_labels = {
+            "amazon": "搜索|评论|CPC",
+            "tiktok": "视觉|互动|同款密度|物流",
+        }.get(expected_platform)
+        if expected_signal_labels is None:
+            raise ValueError("controlled report platform has no signal labels")
+    except (OSError, ValueError) as exc:
+        expected_platform = None
+        expected_basis = None
+        expected_signal_labels = None
+        errors.append(
+            "controlled platform ranking basis could not be derived: "
+            f"{type(exc).__name__}"
+        )
+    canonical_status_lines: set[str] = set()
+    for status_key, expected_value in (
+        ("platform_adapter", expected_platform),
+        ("ranking_basis", expected_basis),
+        ("platform_signal_labels", expected_signal_labels),
+        ("live_market_data_verified", "false"),
+        ("margin_status", "unknown_missing_complete_cost"),
+        ("total_score_status", "not_computed_missing_margin"),
+    ):
+        expected_line = f"- {status_key}: {expected_value}"
+        canonical_status_lines.add(expected_line)
+        status_lines = [
+            line.strip()
+            for line in structural_report_text.splitlines()
+            if status_key.casefold() in line.casefold()
+        ]
+        occurrences = re.findall(
+            rf"(?<![\w]){re.escape(status_key)}(?![\w])",
+            structural_report_text,
+            re.I,
+        )
+        if status_lines != [expected_line] or len(occurrences) != 1:
+            errors.append(
+                f"controlled platform report must contain exactly one {status_key} "
+                f"with value {expected_value}"
+            )
+    live_chain_line = "- 真实市场数据链路未验证"
+    canonical_status_lines.add(live_chain_line)
+    live_chain_lines = [
+        line.strip()
+        for line in structural_report_text.splitlines()
+        if "真实市场数据链路" in line
+    ]
+    if live_chain_lines != [live_chain_line]:
+        errors.append(
+            "controlled platform report must contain exactly one unverified live-market disclosure"
+        )
+
+    lines = structural_report_text.splitlines()
+    provenance_spans: list[set[int]] = []
+    canonical_heading = "## Canonical provenance"
+    try:
+        expected_metadata = controlled_platform_fixture_metadata()
+        expected_weights = controlled_profile_scoring_weights()
+    except (OSError, ValueError) as exc:
+        expected_metadata = None
+        expected_weights = None
+        errors.append(
+            "controlled platform audit inputs could not be derived: "
+            f"{type(exc).__name__}"
+        )
+    strict_cells = lambda line: [
+        cell.strip() for cell in line.strip().strip("|").split("|")
+    ]
+    for index, line in enumerate(lines):
+        if line.strip() != canonical_heading or index + 12 >= len(lines):
+            continue
+        if (
+            lines[index + 1].strip()
+            or lines[index + 5].strip()
+            or lines[index + 9].strip()
+        ):
+            continue
+        if (
+            index + 13 < len(lines)
+            and lines[index + 13].lstrip().startswith("|")
+        ):
+            continue
+        data_header = tuple(
+            cell.casefold() for cell in strict_cells(lines[index + 2])
+        )
+        data_separator = strict_cells(lines[index + 3])
+        data_row = strict_cells(lines[index + 4])
+        metadata_header = tuple(
+            cell.casefold() for cell in strict_cells(lines[index + 6])
+        )
+        metadata_separator = strict_cells(lines[index + 7])
+        metadata_row = strict_cells(lines[index + 8])
+        scoring_header = tuple(
+            cell.casefold() for cell in strict_cells(lines[index + 10])
+        )
+        scoring_separator = strict_cells(lines[index + 11])
+        scoring_row = strict_cells(lines[index + 12])
+        if data_header != CONTROLLED_DATA_ACCESS_COLUMNS or metadata_header != (
+            CONTROLLED_FIXTURE_METADATA_COLUMNS
+        ) or scoring_header != CONTROLLED_SCORING_DIMENSIONS:
+            continue
+        if len(data_separator) != len(CONTROLLED_DATA_ACCESS_COLUMNS) or not all(
+            re.fullmatch(r":?-{3,}:?", cell) for cell in data_separator
+        ):
+            continue
+        if len(metadata_separator) != len(
+            CONTROLLED_FIXTURE_METADATA_COLUMNS
+        ) or not all(re.fullmatch(r":?-{3,}:?", cell) for cell in metadata_separator):
+            continue
+        if len(scoring_separator) != len(CONTROLLED_SCORING_DIMENSIONS) or not all(
+            re.fullmatch(r":?-{3,}:?", cell) for cell in scoring_separator
+        ):
+            continue
+        if len(data_row) != len(CONTROLLED_DATA_ACCESS_COLUMNS) or len(
+            metadata_row
+        ) != len(CONTROLLED_FIXTURE_METADATA_COLUMNS) or len(scoring_row) != len(
+            CONTROLLED_SCORING_DIMENSIONS
+        ):
+            continue
+        try:
+            read_operations = json.loads(data_row[4])
+            collectors_used = json.loads(data_row[5])
+            transformations_used = json.loads(data_row[6])
+            denied_operations = json.loads(data_row[7])
+            candidate_ids = json.loads(metadata_row[2])
+            known_gaps = json.loads(metadata_row[3])
+        except json.JSONDecodeError:
+            continue
+        compact_arrays = (
+            (data_row[4], read_operations),
+            (data_row[5], collectors_used),
+            (data_row[6], transformations_used),
+            (data_row[7], denied_operations),
+            (metadata_row[2], candidate_ids),
+            (metadata_row[3], known_gaps),
+        )
+        if any(
+            raw
+            != json.dumps(
+                parsed, ensure_ascii=False, separators=(",", ":")
+            )
+            for raw, parsed in compact_arrays
+        ):
+            continue
+        reconstructed_access = {
+            "mode": data_row[0],
+            "sources_used": [
+                {
+                    "provider": data_row[1],
+                    "provider_variant": (
+                        None if data_row[2] == "null" else data_row[2]
+                    ),
+                    "source_role": data_row[3],
+                    "read_operations": read_operations,
+                }
+            ],
+            "collectors_used": collectors_used,
+            "transformations_used": transformations_used,
+            "denied_operations": denied_operations,
+        }
+        reconstructed_metadata = (
+            metadata_row[0],
+            metadata_row[1],
+            candidate_ids,
+            known_gaps,
+            metadata_row[4],
+        )
+        expected_scoring_row = (
+            tuple(f"{weight:.2f}" for weight in expected_weights)
+            if expected_weights is not None
+            else None
+        )
+        if (
+            reconstructed_access == data_access
+            and expected_metadata is not None
+            and reconstructed_metadata == expected_metadata
+            and tuple(scoring_row) == expected_scoring_row
+        ):
+            provenance_spans.append(set(range(index, index + 13)))
+    if len(provenance_spans) != 1:
+        errors.append(
+            "controlled platform report must contain one unique JSON-bound provenance block"
+        )
+    provenance_lines = provenance_spans[0] if len(provenance_spans) == 1 else set()
+
+    expected_rows: list[tuple[Any, ...]] = []
+    if isinstance(recommended, list):
+        for candidate in recommended:
+            if not isinstance(candidate, dict):
+                continue
+            scores = candidate.get("scores")
+            if not isinstance(scores, dict):
+                continue
+            expected_rows.append(
+                (
+                    candidate.get("candidate_id"),
+                    candidate.get("rank"),
+                    scores.get("demand"),
+                    scores.get("competition"),
+                    scores.get("margin"),
+                    scores.get("capability_fit"),
+                    scores.get("risk"),
+                    candidate.get("total_score"),
+                )
+            )
+    candidate_spans: list[set[int]] = []
+    index = 0
+    while index < len(lines):
+        if not lines[index].lstrip().startswith("|") or tuple(
+            cell.casefold() for cell in _markdown_cells(lines[index])
+        ) != REPORT_CANDIDATE_COLUMNS:
+            index += 1
+            continue
+        if index + 1 >= len(lines):
+            index += 1
+            continue
+        separators = _markdown_cells(lines[index + 1])
+        if len(separators) != len(REPORT_CANDIDATE_COLUMNS) or not all(
+            re.fullmatch(r":?-{3,}:?", cell) for cell in separators
+        ):
+            index += 1
+            continue
+        table_rows: list[tuple[Any, ...]] = []
+        valid_table = True
+        end = index + 2
+        while end < len(lines) and lines[end].lstrip().startswith("|"):
+            cells = _markdown_cells(lines[end])
+            if len(cells) != len(REPORT_CANDIDATE_COLUMNS) or not re.fullmatch(
+                r"[1-9]\d*", cells[1]
+            ):
+                valid_table = False
+                end += 1
+                continue
+            numbers: list[float | None] = []
+            for raw in cells[2:]:
+                number_valid, value = _report_nullable_number(raw)
+                if not number_valid:
+                    valid_table = False
+                    break
+                numbers.append(value)
+            if len(numbers) == 6:
+                table_rows.append((cells[0], int(cells[1]), *numbers))
+            end += 1
+        if valid_table and table_rows == expected_rows:
+            candidate_spans.append(set(range(index, end)))
+        index = end
+    if len(candidate_spans) != 1:
+        errors.append("controlled platform report must contain one unique validated candidate table")
+    candidate_lines = candidate_spans[0] if len(candidate_spans) == 1 else set()
+
+    expected_attributions: list[tuple[Any, ...]] = []
+    next_codes = CONTROLLED_NEXT_VERIFICATION_CODES.get(expected_platform, [])
+    if isinstance(recommended, list):
+        for candidate in sorted(
+            (item for item in recommended if isinstance(item, dict)),
+            key=lambda item: item.get("rank", 10**9),
+        ):
+            expected_attributions.append(
+                (
+                    candidate.get("candidate_id"),
+                    candidate.get("fit_refs"),
+                    candidate.get("misfit_refs"),
+                    CONTROLLED_RISK_CODES,
+                    next_codes,
+                )
+            )
+    attribution_spans: list[set[int]] = []
+    index = 0
+    while index < len(lines):
+        if not lines[index].lstrip().startswith("|") or tuple(
+            cell.casefold() for cell in _markdown_cells(lines[index])
+        ) != tuple(column.casefold() for column in CONTROLLED_ATTRIBUTION_COLUMNS):
+            index += 1
+            continue
+        if index + 1 >= len(lines):
+            index += 1
+            continue
+        separators = _markdown_cells(lines[index + 1])
+        if len(separators) != len(CONTROLLED_ATTRIBUTION_COLUMNS) or not all(
+            re.fullmatch(r":?-{3,}:?", cell) for cell in separators
+        ):
+            index += 1
+            continue
+        rows: list[tuple[Any, ...]] = []
+        valid_table = True
+        end = index + 2
+        while end < len(lines) and lines[end].lstrip().startswith("|"):
+            cells = _markdown_cells(lines[end])
+            end += 1
+            if len(cells) != len(CONTROLLED_ATTRIBUTION_COLUMNS):
+                valid_table = False
+                continue
+            try:
+                parsed_arrays = [json.loads(value) for value in cells[1:]]
+            except json.JSONDecodeError:
+                valid_table = False
+                continue
+            if any(
+                raw
+                != json.dumps(
+                    parsed, ensure_ascii=False, separators=(",", ":")
+                )
+                for raw, parsed in zip(cells[1:], parsed_arrays)
+            ):
+                valid_table = False
+                continue
+            rows.append((cells[0], *parsed_arrays))
+        if valid_table and rows == expected_attributions:
+            attribution_spans.append(set(range(index, end)))
+        index = end
+    if len(attribution_spans) != 1:
+        errors.append(
+            "controlled platform report must contain one unique JSON-bound candidate attribution table"
+        )
+    attribution_lines = (
+        attribution_spans[0] if len(attribution_spans) == 1 else set()
+    )
+
+    remaining_report = "\n".join(
+        ""
+        if line_index in provenance_lines
+        or line_index in candidate_lines
+        or line_index in attribution_lines
+        or line.strip() in canonical_status_lines
+        else line
+        for line_index, line in enumerate(lines)
+    )
+    remaining_report = normalize_claim_surface(remaining_report)
+    code_claims = normalize_claim_surface(code_claims)
+    claim_surface = remaining_report + "\n" + code_claims
+    if re.search(
+        r"为什么适合你|为什么不适合你|主要风险|下一步最小验证|"
+        r"(?<![\w])(?:fit|misfit)[\s_-]*refs(?![\w])",
+        claim_surface,
+        re.I,
+    ):
+        errors.append("controlled platform report uses noncanonical attribution surface")
+    sensitive_metric = re.compile(
+        r"(?<![\w])(?:total(?:[\s_-]+)scores?|margins?|profits?)(?![\w])|"
+        r"(?<![\w])(?:margin|total[\s_-]+score)[\s_-]+status(?![\w])|"
+        r"(?<![\w])(?:scoring[\s_-]*weights?|weighting|"
+        r"(?:demand|competition|capability[\s_-]*fit|risk)[\s_-]+weights?)(?![\w])|"
+        r"(?<![\w])(?:net[\s_-]+margin|net[\s_-]+profit|commercial[\s_-]+score|"
+        r"return[\s_-]+on[\s_-]+sales|profitability)(?![\w])|"
+        r"(?:毛利|利润|净利)(?:率)?|(?:总分|综合评分|商业评分|商业得分)|权重",
         re.I,
     )
-    numeric = re.compile(r"\d|[零〇一二两三四五六七八九十百千万]")
-    numeric_commercial_claim = False
-    for line in report_text.splitlines():
-        for clause in re.split(r"[。！？；;，,]", line):
-            for match in metric.finditer(clause):
-                if numeric.search(clause[match.end() :]):
-                    numeric_commercial_claim = True
-                    break
-            if numeric_commercial_claim:
-                break
-        if numeric_commercial_claim:
-            break
-    if numeric_commercial_claim:
-        errors.append("controlled platform report asserts numeric margin or total score")
-    source_path = re.escape("references/demo-data/eval-platform-comparison.md")
-    if re.search(
-        rf"(?:未|没有|并未|不曾)(?:读取|使用|采用).{{0,24}}{source_path}",
-        report_text,
-    ):
-        errors.append("controlled platform report contradicts fixture provenance")
+    if sensitive_metric.search(claim_surface):
+        errors.append("controlled platform report uses noncanonical commercial metric surface")
+    provenance_values = (
+        "live_mcp",
+        "verified_import",
+        "browser_assisted",
+        "synthetic_demo",
+        "repository_fixture",
+        "eval_platform_comparison",
+        "live_market",
+        "verified",
+        "direct_market_data",
+        "seller_first_party_data",
+        "official_reference",
+        "experience_reference",
+        "discovery_only",
+        "capability_context",
+        "transformation_only",
+        "collection_only",
+        "forbidden_write",
+        "sellersprite",
+        "ziniao",
+        "sif",
+        "amz123",
+        "lingxing",
+        "zhiwubuyan",
+        "amazon_ads",
+        "google_translate",
+        "hubu_rpa",
+        "linkfox",
+    )
+    provenance_value_pattern = "|".join(
+        re.escape(value).replace("_", r"[\s_-]+") for value in provenance_values
+    )
+    provenance_surface = re.compile(
+        rf"(?<![\w])(?:data_access|controlled_source|platform[\s_-]+adapter|"
+        rf"ranking[\s_-]+basis|platform[\s_-]+signal[\s_-]+labels|"
+        rf"live[\s_-]+market[\s_-]+"
+        rf"data[\s_-]+verified|data[\s_-]+mode|"
+        rf"data[\s_-]+source|providers?(?:[\s_-]+(?:variant|name))?|"
+        rf"source[\s_-]+(?:role|type)|sources?[\s_-]+used|"
+        rf"collectors?[\s_-]+used|transformations?[\s_-]+used|"
+        rf"read[\s_-]+operations?|provenance(?:[\s_-]+type)?|"
+        rf"collection[\s_-]+date|sample[\s_-]+boundary|candidate[\s_-]+ids|"
+        rf"known[\s_-]+gaps|fixture[\s_-]+sha256|origin|database|connector|backend|"
+        rf"live(?:[/\s_-]+(?:mcp|api|endpoint|market))|api|endpoint|fixture|"
+        rf"(?:we[\s_-]+)?quer(?:ied|ying)[\s_-]+(?:the[\s_-]+)?"
+        rf"(?:live|online|external|market|api|endpoint|data)|"
+        rf"(?:evidence|figures?|facts?)[\s_-]+(?:came|come|were[\s_-]+fetched|"
+        rf"were[\s_-]+supplied)[\s_-]+from|"
+        rf"{provenance_value_pattern})(?![\w])|"
+        r"真实市场|市场数据链路(?:已经|已被|已|未)?验证(?:通过)?|"
+        r"(?:已经|已被|已完成|完成)真实市场数据验证|"
+        r"实际市场数据|市场核验|数据模式|数据源|来源角色|来源|提供方|"
+        r"溯源|采集模式|线上接口|接口|接通|联网|实时|读取|运行方式|"
+        r"数据(?:来自|取自|源自)|(?:证据|事实)(?:来自|取自|源自)|"
+        r"结果由.{0,20}支撑|一方导出|生产库|卖家后台|"
+        r"collection[\s_-]*date|sample[\s_-]*boundary|candidate[\s_-]*ids|"
+        r"known[\s_-]*gaps|fixture[\s_-]*sha256|"
+        r"采用.{0,20}(?:数据|接口)|夹具",
+        re.I,
+    )
+    if provenance_surface.search(claim_surface):
+        errors.append("controlled platform report uses noncanonical provenance surface")
     return errors
 
 
@@ -2219,24 +3158,32 @@ def grade_case(
             )
     if case.get("id") in {"P01A", "P01B"}:
         try:
+            platform_fixture = (
+                ROOT / CONTROLLED_PLATFORM_FIXTURE_PATH
+            ).read_text(encoding="utf-8")
             platform_controls = parse_controlled_hard_constraints(
-                (
-                    ROOT / "references/demo-data/eval-platform-comparison.md"
-                ).read_text(encoding="utf-8"),
+                platform_fixture,
                 id_field="candidate_id",
             )
+            platform_oracle = parse_controlled_platform_oracle(platform_fixture)
         except (OSError, ValueError) as exc:
             errors.append(
                 f"controlled platform fixture could not be loaded: {type(exc).__name__}"
             )
         else:
-            expected_top = {
-                "P01A": "platform-search",
-                "P01B": "platform-visual",
+            platform = {
+                "P01A": "amazon",
+                "P01B": "tiktok",
             }[case["id"]]
+            expected_route = {
+                candidate_id: routes[platform]
+                for candidate_id, routes in platform_oracle["candidates"].items()
+            }
+            if set(expected_route) != set(platform_controls):
+                errors.append("controlled platform fixture candidate sets disagree")
             errors.extend(
                 controlled_platform_result_errors(
-                    case["id"], result, set(platform_controls), expected_top
+                    case["id"], result, expected_route
                 )
             )
 
@@ -2245,7 +3192,7 @@ def grade_case(
     if case.get("id") in {"P01A", "P01B"}:
         errors.extend(
             controlled_platform_report_errors(
-                report_text, result.get("recommended")
+                report_text, result
             )
         )
     if case.get("id") == "X01":

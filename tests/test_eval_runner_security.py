@@ -468,6 +468,8 @@ class EvalRuleEffectTests(unittest.TestCase):
                     "risk": 4,
                 },
                 "total_score": None,
+                "fit_refs": ["profile.constraints.capital_per_sku_max"],
+                "misfit_refs": ["profile.capabilities.ad_skill"],
             }
 
         proposed = {
@@ -576,24 +578,134 @@ class EvalRuleEffectTests(unittest.TestCase):
         )
 
     def test_controlled_platform_route_binds_candidates_top_rank_and_unknown_margin(self) -> None:
-        def candidate(candidate_id: str, rank: int) -> dict:
+        fixture_path = ROOT / "references/demo-data/eval-platform-comparison.md"
+        fixture_text = fixture_path.read_text(encoding="utf-8")
+        oracle = eval_runner.parse_controlled_platform_oracle(fixture_text)
+        self.assertEqual(
+            "amazon_search_review_cpc", oracle["bases"]["amazon"]
+        )
+        self.assertEqual(
+            4.5,
+            oracle["candidates"]["platform-search"]["amazon"]["scores"][
+                "demand"
+            ],
+        )
+        hidden_fake = (
+            "<!--\n"
+            "| candidate_id | controlled_initial_investment_cny | controlled_cash_cycle_days | hard_constraint_status |\n"
+            "|---|---:|---:|---|\n"
+            "| fake-hidden | 1 | 1 | pass_synthetic |\n"
+            "-->\n"
+            + fixture_text
+        )
+        self.assertEqual(
+            {"platform-search", "platform-visual"},
+            set(
+                eval_runner.parse_controlled_hard_constraints(
+                    hidden_fake, id_field="candidate_id"
+                )
+            ),
+        )
+        with self.assertRaises(ValueError):
+            eval_runner.parse_controlled_hard_constraints(
+                "```markdown\n" + fixture_text + "\n```\n",
+                id_field="candidate_id",
+            )
+        hidden_div_fixture = "<div hidden>\n" + fixture_text + "\n</div>\n"
+        with self.assertRaises(ValueError):
+            eval_runner.parse_controlled_hard_constraints(
+                hidden_div_fixture, id_field="candidate_id"
+            )
+        with self.assertRaises(ValueError):
+            eval_runner.parse_controlled_platform_oracle(hidden_div_fixture)
+        duplicate_header_lines = fixture_text.splitlines()
+        oracle_header_index = next(
+            index
+            for index, line in enumerate(duplicate_header_lines)
+            if line.startswith("| candidate_id | product |")
+        )
+        duplicate_header_lines[oracle_header_index] = (
+            duplicate_header_lines[oracle_header_index].rstrip(" |")
+            + " | amazon_rank |"
+        )
+        with self.assertRaises(ValueError):
+            eval_runner.parse_controlled_platform_oracle(
+                "\n".join(duplicate_header_lines) + "\n"
+            )
+        hidden_metadata_text = "\n".join(
+            f"<!-- {line} -->"
+            if "采集日期" in line or "不提供完整单位成本" in line
+            else line
+            for line in fixture_text.splitlines()
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            hidden_metadata_path = Path(temp) / "platform.md"
+            hidden_metadata_path.write_text(
+                hidden_metadata_text + "\n", encoding="utf-8"
+            )
+            with mock.patch.object(
+                eval_runner,
+                "CONTROLLED_PLATFORM_FIXTURE_PATH",
+                str(hidden_metadata_path),
+            ):
+                with self.assertRaises(ValueError):
+                    eval_runner.controlled_platform_fixture_metadata()
+        profile_fixture = (
+            ROOT / "evals/product-research/fixtures/sellers/eval-content/profile.yaml"
+        ).read_text(encoding="utf-8")
+        scoring_block = (
+            "  scoring_weights:\n"
+            "    demand: 0.25\n"
+            "    competition: 0.15\n"
+            "    margin: 0.20\n"
+            "    capability_fit: 0.25\n"
+            "    risk: 0.15\n"
+        )
+        relocated_profile = profile_fixture.replace(scoring_block, "", 1).replace(
+            "capabilities:\n", "capabilities:\n" + scoring_block, 1
+        )
+        with tempfile.TemporaryDirectory() as temp:
+            relocated_profile_path = Path(temp) / "profile.yaml"
+            relocated_profile_path.write_text(relocated_profile, encoding="utf-8")
+            with mock.patch.object(
+                eval_runner,
+                "CONTROLLED_PROFILE_FIXTURE_PATH",
+                str(relocated_profile_path),
+            ):
+                with self.assertRaises(ValueError):
+                    eval_runner.controlled_profile_scoring_weights()
+
+        def candidate(
+            candidate_id: str,
+            rank: int,
+            demand: float,
+            competition: float,
+            capability_fit: float,
+            risk: float,
+        ) -> dict:
+            references = eval_runner.CONTROLLED_ATTRIBUTION_REFS["amazon"][
+                candidate_id
+            ]
             return {
                 "candidate_id": candidate_id,
                 "rank": rank,
                 "scores": {
-                    "demand": 4,
-                    "competition": 3,
+                    "demand": demand,
+                    "competition": competition,
                     "margin": None,
-                    "capability_fit": 4,
-                    "risk": 4,
+                    "capability_fit": capability_fit,
+                    "risk": risk,
                 },
                 "total_score": None,
+                "fit_refs": references["fit_refs"],
+                "misfit_refs": references["misfit_refs"],
             }
 
         result = {
+            "platform_adapter": "amazon",
             "recommended": [
-                candidate("platform-search", 1),
-                candidate("platform-visual", 2),
+                candidate("platform-search", 1, 4.5, 4.0, 4.0, 4.5),
+                candidate("platform-visual", 2, 1.5, 3.0, 4.0, 4.5),
             ],
             "filtered": [],
             "blocked_pending_data": [],
@@ -611,26 +723,59 @@ class EvalRuleEffectTests(unittest.TestCase):
                     }
                 ],
                 "collectors_used": [],
+                "transformations_used": [],
+                "denied_operations": [],
             },
         }
-        candidate_ids = {"platform-search", "platform-visual"}
+        expected_route = {
+            "platform-search": {
+                "rank": 1,
+                "scores": {
+                    "demand": 4.5,
+                    "competition": 4.0,
+                    "capability_fit": 4.0,
+                    "risk": 4.5,
+                },
+            },
+            "platform-visual": {
+                "rank": 2,
+                "scores": {
+                    "demand": 1.5,
+                    "competition": 3.0,
+                    "capability_fit": 4.0,
+                    "risk": 4.5,
+                },
+            },
+        }
         self.assertEqual(
             [],
             eval_runner.controlled_platform_result_errors(
-                "P01A", result, candidate_ids, "platform-search"
+                "P01A", result, expected_route
             ),
         )
         wrong_top = json.loads(json.dumps(result))
         wrong_top["recommended"][0]["rank"] = 2
         wrong_top["recommended"][1]["rank"] = 1
         errors = eval_runner.controlled_platform_result_errors(
-            "P01A", wrong_top, candidate_ids, "platform-search"
+            "P01A", wrong_top, expected_route
         )
-        self.assertTrue(any("top candidate" in error for error in errors))
+        self.assertTrue(any("platform oracle" in error for error in errors))
+        wrong_score = json.loads(json.dumps(result))
+        wrong_score["recommended"][0]["scores"]["demand"] = 4.4
+        errors = eval_runner.controlled_platform_result_errors(
+            "P01A", wrong_score, expected_route
+        )
+        self.assertTrue(any("platform oracle" in error for error in errors))
+        near_score = json.loads(json.dumps(result))
+        near_score["recommended"][0]["scores"]["demand"] = 4.500000004
+        errors = eval_runner.controlled_platform_result_errors(
+            "P01A", near_score, expected_route
+        )
+        self.assertTrue(any("platform oracle" in error for error in errors))
         malformed_rank = json.loads(json.dumps(result))
         malformed_rank["recommended"][0]["rank"] = None
         errors = eval_runner.controlled_platform_result_errors(
-            "P01A", malformed_rank, candidate_ids, "platform-search"
+            "P01A", malformed_rank, expected_route
         )
         self.assertTrue(any("ranks" in error for error in errors))
         pending = json.loads(json.dumps(result))
@@ -638,14 +783,14 @@ class EvalRuleEffectTests(unittest.TestCase):
             {"candidate_id": "platform-search", "missing_fields": ["真实成本"]}
         ]
         errors = eval_runner.controlled_platform_result_errors(
-            "P01A", pending, candidate_ids, "platform-search"
+            "P01A", pending, expected_route
         )
         self.assertTrue(any("blocked_pending_data" in error for error in errors))
         fake_live = json.loads(json.dumps(result))
         fake_live["data_access"]["mode"] = "live_mcp"
         fake_live["data_access"]["sources_used"] = []
         errors = eval_runner.controlled_platform_result_errors(
-            "P01A", fake_live, candidate_ids, "platform-search"
+            "P01A", fake_live, expected_route
         )
         self.assertTrue(any("synthetic_demo" in error for error in errors))
         self.assertTrue(any("provenance" in error for error in errors))
@@ -659,7 +804,7 @@ class EvalRuleEffectTests(unittest.TestCase):
             }
         )
         errors = eval_runner.controlled_platform_result_errors(
-            "P01A", extra_source, candidate_ids, "platform-search"
+            "P01A", extra_source, expected_route
         )
         self.assertTrue(any("provenance" in error for error in errors))
         denied_read = json.loads(json.dumps(result))
@@ -668,39 +813,277 @@ class EvalRuleEffectTests(unittest.TestCase):
             "did NOT read references/demo-data/eval-platform-comparison.md"
         ]
         errors = eval_runner.controlled_platform_result_errors(
-            "P01A", denied_read, candidate_ids, "platform-search"
+            "P01A", denied_read, expected_route
         )
         self.assertTrue(any("provenance" in error for error in errors))
+        transformed = json.loads(json.dumps(result))
+        transformed["data_access"]["transformations_used"] = ["translation"]
+        errors = eval_runner.controlled_platform_result_errors(
+            "P01A", transformed, expected_route
+        )
+        self.assertTrue(any("transformations_used" in error for error in errors))
+        denied = json.loads(json.dumps(result))
+        denied["data_access"]["denied_operations"] = ["request_review"]
+        errors = eval_runner.controlled_platform_result_errors(
+            "P01A", denied, expected_route
+        )
+        self.assertTrue(any("denied_operations" in error for error in errors))
 
+        provenance_block = (
+            "## Canonical provenance\n\n"
+            "| mode | provider | provider_variant | source_role | read_operations | collectors_used | transformations_used | denied_operations |\n"
+            "|---|---|---|---|---|---|---|---|\n"
+            "| synthetic_demo | repository_fixture | eval_platform_comparison | direct_market_data | [\"read references/demo-data/eval-platform-comparison.md\"] | [] | [] | [] |\n\n"
+            "| collection_date | sample_boundary | candidate_ids | known_gaps | fixture_sha256 |\n"
+            "|---|---|---|---|---|\n"
+            "| 2026-07-11 | controlled_fixture_all_rows | [\"platform-search\",\"platform-visual\"] | [\"complete_unit_cost\",\"live_market_validation\"] | 7b9b17de664619a320a8f30bae03046ac0bd1615a8a3e0b9a901b21b3db3f72c |\n\n"
+            "| demand | competition | margin | capability_fit | risk |\n"
+            "|---:|---:|---:|---:|---:|\n"
+            "| 0.25 | 0.15 | 0.20 | 0.25 | 0.15 |\n"
+        )
         report = (
             "# 合成假设 hypothesis-only\n\n"
-            "- data_access.mode: synthetic_demo\n"
-            "- controlled_source: references/demo-data/eval-platform-comparison.md\n"
-            "- live_market_data_verified: false\n\n"
-            "真实市场数据链路未验证。\n\n"
+            + provenance_block
+            + "\n"
+            "- platform_adapter: amazon\n"
+            "- ranking_basis: amazon_search_review_cpc\n"
+            "- platform_signal_labels: 搜索|评论|CPC\n"
+            "- live_market_data_verified: false\n"
+            "- margin_status: unknown_missing_complete_cost\n"
+            "- total_score_status: not_computed_missing_margin\n\n"
+            "- 真实市场数据链路未验证\n\n"
             "| candidate_id | rank | demand | competition | margin | capability_fit | risk | total_score |\n"
             "|---|---:|---:|---:|---:|---:|---:|---:|\n"
-            "| platform-search | 1 | 4 | 3 | N/A | 4 | 4 | N/A |\n"
-            "| platform-visual | 2 | 4 | 3 | N/A | 4 | 4 | N/A |\n"
+            "| platform-search | 1 | 4.5 | 4.0 | N/A | 4.0 | 4.5 | N/A |\n"
+            "| platform-visual | 2 | 1.5 | 3.0 | N/A | 4.0 | 4.5 | N/A |\n\n"
+            "| candidate_id | 为什么适合你 | 为什么不适合你 | 主要风险 | 下一步最小验证 |\n"
+            "|---|---|---|---|---|\n"
+            "| platform-search | [\"profile.constraints.capital_per_sku_max\",\"profile.constraints.cash_cycle_tolerance_days\",\"profile.capabilities.supply_chain\",\"profile.preferences.review_moat_max\"] | [\"profile.capabilities.content_skill\",\"profile.capabilities.ad_skill\"] | [\"complete_unit_cost\",\"live_market_validation\"] | [\"complete_cost\",\"amazon_search_review_cpc\",\"compliance\"] |\n"
+            "| platform-visual | [\"profile.constraints.capital_per_sku_max\",\"profile.constraints.cash_cycle_tolerance_days\",\"profile.capabilities.supply_chain\",\"profile.capabilities.content_skill\",\"profile.preferences.product_style\"] | [\"profile.capabilities.ad_skill\",\"profile.preferences.competition_tolerance\"] | [\"complete_unit_cost\",\"live_market_validation\"] | [\"complete_cost\",\"amazon_search_review_cpc\",\"compliance\"] |\n"
         )
         self.assertEqual(
             [],
             eval_runner.controlled_platform_report_errors(
-                report, result["recommended"]
+                report, result
             ),
         )
-        n_a_with_candidate_count = report + "\n两个候选的 total_score 均为 N/A。\n"
+        missing_attribution = report.split(
+            "| candidate_id | 为什么适合你 | 为什么不适合你 | 主要风险 | 下一步最小验证 |",
+            1,
+        )[0]
+        errors = eval_runner.controlled_platform_report_errors(
+            missing_attribution, result
+        )
+        self.assertTrue(any("candidate attribution table" in error for error in errors))
+        fake_reference_result = json.loads(json.dumps(result))
+        fake_reference_result["recommended"][0]["fit_refs"] = [
+            "profile.not_a_real_field"
+        ]
+        errors = eval_runner.controlled_platform_result_errors(
+            "P01A", fake_reference_result, expected_route
+        )
+        self.assertTrue(any("controlled seller references" in error for error in errors))
+        for bad_provenance_report in (
+            report.replace(
+                "| synthetic_demo | repository_fixture |",
+                "| live_mcp | repository_fixture |",
+            ),
+            report.replace("| repository_fixture |", "| other_provider |", 1),
+            report.replace(
+                '["read references/demo-data/eval-platform-comparison.md"]',
+                '[ "read references/demo-data/eval-platform-comparison.md" ]',
+                1,
+            ),
+            report.replace("| [] | [] | [] |", "| [] | [\"translation\"] | [] |", 1),
+            report.replace(
+                '["platform-search","platform-visual"]',
+                '["platform-visual","platform-search"]',
+                1,
+            ),
+            report.replace("| 2026-07-11 |", "| 2026-07-12 |", 1),
+            report.replace(
+                "7b9b17de664619a320a8f30bae03046ac0bd1615a8a3e0b9a901b21b3db3f72c",
+                "0" * 64,
+                1,
+            ),
+            report.replace(
+                "| 0.25 | 0.15 | 0.20 | 0.25 | 0.15 |",
+                "| 0.25 | 0.15 | 0.30 | 0.25 | 0.05 |",
+                1,
+            ),
+            report.replace(
+                "| 2026-07-11 | controlled_fixture_all_rows | "
+                '["platform-search","platform-visual"] | '
+                '["complete_unit_cost","live_market_validation"] | '
+                "7b9b17de664619a320a8f30bae03046ac0bd1615a8a3e0b9a901b21b3db3f72c |",
+                "| 2026-07-11 | controlled_fixture_all_rows | "
+                '["platform-search","platform-visual"] | '
+                '["complete_unit_cost","live_market_validation"] | '
+                "7b9b17de664619a320a8f30bae03046ac0bd1615a8a3e0b9a901b21b3db3f72c |\n"
+                "| 2026-07-12 | controlled_fixture_all_rows | "
+                '["platform-search","platform-visual"] | '
+                '["complete_unit_cost","live_market_validation"] | '
+                "7b9b17de664619a320a8f30bae03046ac0bd1615a8a3e0b9a901b21b3db3f72c |",
+                1,
+            ),
+            report.replace("## Canonical provenance\n", "", 1),
+            report + "\n" + provenance_block,
+        ):
+            errors = eval_runner.controlled_platform_report_errors(
+                bad_provenance_report, result
+            )
+            self.assertTrue(
+                any("JSON-bound provenance block" in error for error in errors),
+                bad_provenance_report,
+            )
+        mismatched_result = json.loads(json.dumps(result))
+        mismatched_result["data_access"]["collectors_used"] = ["hubu_rpa"]
+        errors = eval_runner.controlled_platform_report_errors(report, mismatched_result)
+        self.assertTrue(any("JSON-bound provenance block" in error for error in errors))
+        with tempfile.TemporaryDirectory() as temp:
+            drifted_fixture = Path(temp) / "platform.md"
+            drifted_fixture.write_text(
+                fixture_text.replace("稳定高搜索", "受控信号已改变", 1),
+                encoding="utf-8",
+            )
+            with mock.patch.object(
+                eval_runner,
+                "CONTROLLED_PLATFORM_FIXTURE_PATH",
+                str(drifted_fixture),
+            ):
+                errors = eval_runner.controlled_platform_report_errors(report, result)
+            self.assertTrue(
+                any("JSON-bound provenance block" in error for error in errors)
+            )
+        multiline_link = '[intro](https://example.invalid\n "title")\n' + report
         self.assertEqual(
             [],
-            eval_runner.controlled_platform_report_errors(
-                n_a_with_candidate_count, result["recommended"]
-            ),
+            eval_runner.controlled_platform_report_errors(multiline_link, result),
         )
+        candidate_header = (
+            "| candidate_id | rank | demand | competition | margin | "
+            "capability_fit | risk | total_score |"
+        )
+        linked_candidate_header = report.replace(
+            candidate_header,
+            f"[{candidate_header}](https://example.invalid)",
+            1,
+        )
+        errors = eval_runner.controlled_platform_report_errors(
+            linked_candidate_header, result
+        )
+        self.assertTrue(any("candidate table" in error for error in errors))
+        inline_candidate_rows = report.replace(
+            "| platform-search | 1 | 4.5 | 4.0 | N/A | 4.0 | 4.5 | N/A |",
+            "`| platform-search | 1 | 4.5 | 4.0 | N/A | 4.0 | 4.5 | N/A |`",
+            1,
+        ).replace(
+            "| platform-visual | 2 | 1.5 | 3.0 | N/A | 4.0 | 4.5 | N/A |",
+            "`| platform-visual | 2 | 1.5 | 3.0 | N/A | 4.0 | 4.5 | N/A |`",
+            1,
+        )
+        errors = eval_runner.controlled_platform_report_errors(
+            inline_candidate_rows, result
+        )
+        self.assertTrue(any("candidate table" in error for error in errors))
+        rank_one_row = (
+            "| platform-search | 1 | 4.5 | 4.0 | N/A | 4.0 | 4.5 | N/A |"
+        )
+        rank_two_row = (
+            "| platform-visual | 2 | 1.5 | 3.0 | N/A | 4.0 | 4.5 | N/A |"
+        )
+        swapped_candidate_rows = report.replace(
+            rank_one_row, "__P01_RANK_ONE__", 1
+        ).replace(rank_two_row, rank_one_row, 1).replace(
+            "__P01_RANK_ONE__", rank_two_row, 1
+        )
+        errors = eval_runner.controlled_platform_report_errors(
+            swapped_candidate_rows, result
+        )
+        self.assertTrue(any("ordered result.recommended" in error for error in errors))
+        for bad_status_report in (
+            report.replace(
+                "- ranking_basis: amazon_search_review_cpc",
+                "- ranking_basis: tiktok_visual_interaction_same_density_logistics",
+            ),
+            report.replace(
+                "- margin_status: unknown_missing_complete_cost",
+                "- margin_status: unknown_missing_complete_cost_extra",
+            ),
+            report
+            + "\n- margin_status: known_20_percent\n"
+            + "- total_score_status: computed_5\n",
+            report
+            + "\n- margin_status: known_20_percent # actual\n"
+            + "- total_score_status: computed_5 # actual\n",
+            report + "\n* margin_status: known_complete_cost\n",
+            report + "\nmargin_status: known_complete_cost\n",
+            report + "\n- margin_status：known_complete_cost\n",
+            report + "\n| margin_status | known_complete_cost |\n",
+            report + "\n- margin_**status**: known_20_percent\n",
+            report + "\n- total_**score_status**: computed_5\n",
+            report + "\n- total_[score_status][x]: computed_5\n[x]: https://example.invalid\n",
+            report + "\n- total\\_score_status: computed_5\n",
+            report + "\n- live_market_data_verified: true\n",
+            report + "\n真实市场数据链路已验证。\n",
+            report.replace(
+                "- total_score_status: not_computed_missing_margin\n", ""
+            ),
+        ):
+            errors = eval_runner.controlled_platform_report_errors(
+                bad_status_report, result
+            )
+            self.assertTrue(errors, bad_status_report)
+        for safe_context in (
+            "P01B 覆盖 2 个候选，完整成本字段缺失。",
+            "截至 2026/07/12，商业结论待核实。",
+            "profile.preferences.margin_floor_pct: 35%，商业结论待核实。",
+            "target price is USD 19.99; commercial conclusion remains pending.",
+            "None of the candidates crossed a hard constraint.",
+            "CPC plays a role in the Amazon ranking.",
+            "Search interest is a demand source signal.",
+            "The Amazon search query is narrow.",
+            "TikTok live content is visually strong.",
+        ):
+            self.assertEqual(
+                [],
+                eval_runner.controlled_platform_report_errors(
+                    report + "\n" + safe_context + "\n", result
+                ),
+                safe_context,
+            )
+        for n_a_statement in (
+            "两个候选的 total_score 均为 N/A。",
+            "2 个候选的 total_score 均为 N/A。",
+            "fixture 未提供完整单位成本，所以 margin 与 total_score 一律为 N/A。",
+            "实际毛利率一律为 N/A。",
+            "total_score: 5 分制，当前值为 N/A。",
+            "total_score uses a 5-point scale and remains N/A.",
+            "实际毛利率无法对照 profile.preferences.margin_floor_pct=35，保持 N/A。",
+            "P01B 的 total_score 保持 N/A。",
+            "第2阶段的 total_score 保持 N/A。",
+            "表1的 total_score 列保持 N/A。",
+            "2 款受控候选的 total_score 均为 N/A。",
+            "截至2026/07/12 total_score 保持 N/A。",
+            "target price is USD 19.99 and total_score remains N/A.",
+            "profile.preferences.margin_floor_pct: 35% 且 total_score 为 N/A。",
+            "candidate 2 actual margin remains N/A.",
+            "rank 1 actual margin remains N/A.",
+            "2026 actual margin remains N/A.",
+            "section 3 final profit remains N/A.",
+        ):
+            errors = eval_runner.controlled_platform_report_errors(
+                report + "\n" + n_a_statement + "\n", result
+            )
+            self.assertTrue(
+                any("noncanonical commercial" in error for error in errors),
+                n_a_statement,
+            )
         malicious_report = report + "\n实际毛利为 20%，total_score=5。\n"
         errors = eval_runner.controlled_platform_report_errors(
-            malicious_report, result["recommended"]
+            malicious_report, result
         )
-        self.assertTrue(any("numeric margin" in error for error in errors))
+        self.assertTrue(any("noncanonical commercial" in error for error in errors))
         for claim in (
             "实际毛利率是20%",
             "实际毛利率约20%",
@@ -709,65 +1092,203 @@ class EvalRuleEffectTests(unittest.TestCase):
             "最终总分约5",
             "完整商业总分为5",
             "预估毛利率达到20%",
+            "实际毛利率约三成",
+            "最终总分为五",
+            "实际毛利率可达到20%",
+            "实际毛利率：约20%",
+            "实际毛利率大约为20%",
+            "实际毛利率介于20%至30%",
+            "预计毛利率在20%左右",
+            "最终总分大约为5",
+            "total_score 评分为5",
+            "实际毛利率为 **20%**",
+            "20%的实际毛利率",
+            "actual profit=$20",
+            "实际利润为20美元",
+            "实际毛利率，20%",
+            "actual margin, 20%",
+            "实际毛利率：\n20%",
+            "total_score 与 profile.capability_score=5 相同",
+            "实际毛利率等于 profile.preferences.margin_floor_pct=35",
+            "actual margin is approximately 20%",
+            "实际毛利率可能达到20%",
+            "实际毛利率为\n20%",
+            "margin: 20%",
+            "| actual margin | 20% |",
+            "actual margin is estimated to be 20%",
+            "actual margin stands at 20%",
+            "实际毛利率保守估计为20%",
+            "实际毛利率经测算约为20%",
+            "实际毛利率预计约为20%",
+            "20% estimated actual margin",
+            "| actual margin |\n|---|\n| 20% |",
+            "actual margin N/A (20%)",
+            "actual margin N/A; reported value 20%",
+            "N/A actual margin reported elsewhere as 20%",
+            "actual margin is capped at profile.preferences.margin_floor_pct=20%",
+            "total score: 5",
+            "实际毛<span></span>利率为20%",
+            "实际毛&#x5229;率为20%",
+            "实际毛\u200b利率为20%",
+            "candidate_id | rank | demand | competition | margin | capability_fit | risk | total_score\n"
+            "---|---:|---:|---:|---:|---:|---:|---:\n"
+            "| actual margin | 1 | 20% | 3 | N/A | 4 | 4 | N/A |",
+            "actual mar**gin**: 20%",
+            "total **score**: 5",
+            "实际毛**利**率为20%",
+            "ｍａｒｇｉｎ: 20%",
+            "ｔｏｔａｌ＿ｓｃｏｒｅ: 5",
+            "actual mar[gin][x]: 20%\n[x]: https://example.invalid",
+            "实际毛[利][x]率为20%\n[x]: https://example.invalid",
+            "actual margins are 20%",
+            "final profits are USD 20",
+            "total scores: 5",
+            "actual mar\u034Fgin is 20%",
+            "实际毛\uFE0F利率为20%",
+            "- total_sco\uFE0Fre_status: computed_5",
+            "- margin_sta\uFE0Ftus: known",
+            "真实市场数据链路已经验证。",
+            "真实市场数据链路已被验证。",
+            "真实市场数据链路验证通过。",
+            "实际数据模式为 live_mcp。",
+            "实际受控来源为 live_market。",
+            "Live market data is verified.",
+            "已完成真实市场数据验证。",
+            "本次数据模式并非 synthetic_demo。",
+            "This was not a synthetic_demo run.",
+            "Data came from live MCP.",
+            "Data came from a live-market feed.",
+            "Data collection was browser assisted.",
+            "The source was not repository_fixture.",
+            "The variant was not eval-platform-comparison.",
+            "The role was not direct market data.",
+            "Data mode was none.",
+            "本次数据模式为 none。",
+            "The source role was official_reference.",
+            "The source role was seller first party data.",
+            "The provider was amazon_ads.",
+            "This provenance was different.",
+            "We queried the live API.",
+            "数据来自线上接口。",
+            "已接通卖家精灵接口。",
+            "The fixture was not read.",
+            "Data came from live/MCP.",
+            "本次运行方式为none。",
+            "本报告采用卖家精灵数据。",
+            "The sources/providers were different.",
+            "sources_used: []",
+            "collectors_used: []",
+            "read_operations: []",
+            "source_type: other",
+            "provider_name: other",
+            "provenance_type: other",
+            "collection_date: 2026-07-12; sample_boundary: production_all_rows; known_gaps: []",
+            "Origin: production database.",
+            "Evidence came from an external connector.",
+            "证据取自生产库。",
+            "事实来自卖家后台。",
+            "实际净利率为20%。",
+            "最终综合评分为5。",
+            "Commercial score: 5.",
+            "Return on sales is 20%.",
         ):
             errors = eval_runner.controlled_platform_report_errors(
-                report + "\n" + claim, result["recommended"]
+                report + "\n" + claim, result
             )
-            self.assertTrue(any("numeric margin" in error for error in errors), claim)
+            self.assertTrue(
+                any(
+                    "noncanonical commercial" in error
+                    or "noncanonical provenance" in error
+                    or "exactly one" in error
+                    for error in errors
+                ),
+                claim,
+            )
         negated_report = report + "\n没有证据支持实际毛利率为20%。\n"
         errors = eval_runner.controlled_platform_report_errors(
-            negated_report, result["recommended"]
+            negated_report, result
         )
-        self.assertTrue(any("numeric margin" in error for error in errors))
+        self.assertTrue(any("noncanonical commercial" in error for error in errors))
+        for visible_code_claim in (
+            report
+            + "\n```text\nactual margin is 20%; data came from live MCP.\n```\n",
+            report
+            + "\n    actual margin is 20%; data came from live MCP.\n",
+        ):
+            errors = eval_runner.controlled_platform_report_errors(
+                visible_code_claim, result
+            )
+            self.assertTrue(
+                any("noncanonical commercial" in error for error in errors)
+            )
+            self.assertTrue(
+                any("noncanonical provenance" in error for error in errors)
+            )
+        for raw_tag in ("pre", "textarea", "script", "style", "template"):
+            raw_html_claim = (
+                report
+                + f"\n<{raw_tag}>actual margin is 20%; live MCP verified.</{raw_tag}>\n"
+            )
+            errors = eval_runner.controlled_platform_report_errors(
+                raw_html_claim, result
+            )
+            self.assertTrue(any("raw HTML" in error for error in errors), raw_tag)
+        hidden_html_report = (
+            '<div hidden>\n' + report + "\n</div>\n\n# visible\ncommercial conclusion pending.\n"
+        )
+        errors = eval_runner.controlled_platform_report_errors(
+            hidden_html_report, result
+        )
+        self.assertTrue(any("raw HTML" in error for error in errors))
         post_negated_report = report + "\n所谓实际毛利率为20%并未验证。\n"
         errors = eval_runner.controlled_platform_report_errors(
-            post_negated_report, result["recommended"]
+            post_negated_report, result
         )
-        self.assertTrue(any("numeric margin" in error for error in errors))
+        self.assertTrue(any("noncanonical commercial" in error for error in errors))
         source_denial = report + "\n未使用 references/demo-data/eval-platform-comparison.md。\n"
         errors = eval_runner.controlled_platform_report_errors(
-            source_denial, result["recommended"]
+            source_denial, result
         )
-        self.assertTrue(any("contradicts" in error for error in errors))
+        self.assertTrue(any("noncanonical provenance" in error for error in errors))
         hidden_report = (
             "<!--\n"
             + report
             + "\n-->\n\n# 对外结论\n\nlive_mcp，真实链路已验证，实际毛利率是20%。\n"
         )
         errors = eval_runner.controlled_platform_report_errors(
-            hidden_report, result["recommended"]
+            hidden_report, result
         )
         self.assertTrue(any("candidate table" in error for error in errors))
         self.assertTrue(any("disclosure" in error for error in errors))
-        self.assertTrue(any("numeric margin" in error for error in errors))
+        self.assertTrue(any("noncanonical commercial" in error for error in errors))
         fenced_report = "```markdown\n" + report + "\n```\n"
         errors = eval_runner.controlled_platform_report_errors(
-            fenced_report, result["recommended"]
+            fenced_report, result
         )
         self.assertTrue(any("candidate table" in error for error in errors))
         invalid_close = "```markdown\n```not-a-close\n" + report + "\n```\n"
         errors = eval_runner.controlled_platform_report_errors(
-            invalid_close, result["recommended"]
+            invalid_close, result
         )
         self.assertTrue(any("candidate table" in error for error in errors))
         indented_report = "\n".join("    " + line for line in report.splitlines())
         errors = eval_runner.controlled_platform_report_errors(
-            indented_report, result["recommended"]
+            indented_report, result
         )
         self.assertTrue(any("candidate table" in error for error in errors))
         missing_separator = report.replace(
             "|---|---:|---:|---:|---:|---:|---:|---:|\n", ""
         )
         errors = eval_runner.controlled_platform_report_errors(
-            missing_separator, result["recommended"]
+            missing_separator, result
         )
         self.assertTrue(any("separator" in error for error in errors))
         divergent_report = report.replace(
-            "| platform-search | 1 | 4 | 3 | N/A | 4 | 4 | N/A |",
-            "| platform-search | 1 | 4 | 3 | 2 | 4 | 4 | 4 |",
+            "| platform-search | 1 | 4.5 | 4.0 | N/A | 4.0 | 4.5 | N/A |",
+            "| platform-search | 1 | 4.5 | 4.0 | 2 | 4.0 | 4.5 | 4 |",
         )
         errors = eval_runner.controlled_platform_report_errors(
-            divergent_report, result["recommended"]
+            divergent_report, result
         )
         self.assertTrue(any("exactly match" in error for error in errors))
 
@@ -810,7 +1331,7 @@ class EvalRuleEffectTests(unittest.TestCase):
                 case, bound_result, workdir, [], []
             )
             self.assertFalse(passed)
-            self.assertTrue(any("numeric margin" in error for error in errors))
+            self.assertTrue(any("noncanonical commercial" in error for error in errors))
 
         fixture = (
             ROOT / "references/demo-data/eval-platform-comparison.md"
