@@ -80,7 +80,7 @@ P01B / TikTok 按 rank 写两行：
 | platform-visual | ["profile.capabilities.content_skill","profile.capabilities.supply_chain","profile.preferences.product_style"] | ["profile.preferences.competition_tolerance","profile.capabilities.team_size","profile.preferences.margin_floor_pct"] | ["complete_unit_cost","live_market_validation"] | ["complete_cost","tiktok_visual_interaction_logistics","compliance"] |
 | platform-search | ["profile.constraints.logistics_modes","profile.capabilities.supply_chain","profile.preferences.risk_appetite"] | ["profile.capabilities.content_skill","profile.preferences.competition_tolerance"] | ["complete_unit_cost","live_market_validation"] | ["complete_cost","tiktok_visual_interaction_logistics","compliance"] |
 
-最终 JSON 的 `fit_refs`、`misfit_refs` 必须逐值复制对应归因表。归因表已经满足每个候选的“为什么适合你 / 为什么不适合你 / 主要风险 / 下一步最小验证”，不要另写第二套归因事实面。
+最终 JSON 的 `fit_refs`、`misfit_refs` 必须逐值复制对应归因表。归因表已经满足四项个性化归因要求，不要在表外再次写四个列名，也不要用正文引用其中任一列。若报告末尾需要下一步建议，只能写“按候选个性化归因表逐项复核”。
 
 ## 唯一事实面
 

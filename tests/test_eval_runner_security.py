@@ -1045,6 +1045,7 @@ class EvalRuleEffectTests(unittest.TestCase):
             "Search interest is a demand source signal.",
             "The Amazon search query is narrow.",
             "TikTok live content is visually strong.",
+            "按候选个性化归因表逐项复核。",
         ):
             self.assertEqual(
                 [],
