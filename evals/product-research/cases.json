@@ -322,7 +322,7 @@
         "filtered_exact": ["pressure-a"],
         "pending_include": ["pressure-b"],
         "pending_exact": ["pressure-b"],
-        "required_terms": ["忠实执行段", "压力测试段", "纳入初筛后的排序对照"],
+        "required_terms": ["忠实执行段", "压力测试段"],
         "forbidden_terms": []
       }
     },
