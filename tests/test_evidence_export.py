@@ -106,6 +106,7 @@ class EvidenceExportTests(unittest.TestCase):
             case / "result.json",
             {
                 "status": "needs_input",
+                "conclusion_type": "not_applicable",
                 "seller_id": None,
                 "platform_adapter": "tiktok",
                 "report_path": None,

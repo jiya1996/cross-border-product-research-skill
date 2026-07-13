@@ -5,6 +5,7 @@
   "additionalProperties": false,
   "required": [
     "status",
+    "conclusion_type",
     "seller_id",
     "platform_adapter",
     "report_path",

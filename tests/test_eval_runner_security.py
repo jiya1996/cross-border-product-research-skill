@@ -223,6 +223,26 @@ class EvalCommandAuditTests(unittest.TestCase):
         self.assertNotIn("update_listing", exported)
         self.assertNotIn('"curl"', exported)
 
+        camel_events = self.events(
+            {
+                "type": "mcp_tool_call",
+                "server": "catalog",
+                "name": "updateListing",
+            }
+        )
+        names, audit = eval_runner.audit_event_stream(
+            camel_events, ["update_listing"]
+        )
+        self.assertEqual(["catalog:updateListing"], names)
+        self.assertIn(
+            "case_forbidden_external_tool",
+            audit["command_execution"]["violations"],
+        )
+        self.assertIn(
+            "external_write_capable_tool",
+            audit["command_execution"]["violations"],
+        )
+
     def test_read_command_mentioning_curl_is_not_a_false_positive(self) -> None:
         events = self.events(
             {
@@ -755,6 +775,7 @@ class EvalRuleEffectTests(unittest.TestCase):
         bound_result = {
             **result,
             "status": "completed",
+            "conclusion_type": "not_applicable",
             "seller_id": "eval-content",
             "platform_adapter": "amazon",
             "report_path": "reports/eval-content/platform.md",
@@ -829,6 +850,7 @@ class EvalGradeBindingTests(unittest.TestCase):
     def result(self) -> dict:
         return {
             "status": "completed",
+            "conclusion_type": "not_applicable",
             "seller_id": "eval-content",
             "platform_adapter": "tiktok",
             "report_path": "reports/eval-content/result.md",
@@ -918,6 +940,8 @@ class EvalGradeBindingTests(unittest.TestCase):
     def test_conclusion_type_is_bound_to_json_and_visible_report(self) -> None:
         case = self.case()
         case["expected"]["conclusion_type"] = "demand_hypothesis_only"
+        case["expected"]["recommended_exact"] = ["candidate-one"]
+        case["expected"]["pending_exact"] = []
         result = self.result()
         result["conclusion_type"] = "demand_hypothesis_only"
         with tempfile.TemporaryDirectory() as temp:
@@ -938,6 +962,19 @@ class EvalGradeBindingTests(unittest.TestCase):
             )
             self.assertTrue(passed, errors)
 
+            extra_result = json.loads(json.dumps(result))
+            extra_result["recommended"].append(
+                {
+                    "candidate_id": "invented-commercial-recommendation",
+                    "scores": {"competition": 5},
+                }
+            )
+            passed, errors, _ = eval_runner.grade_case(
+                case, extra_result, workdir, [], []
+            )
+            self.assertFalse(passed)
+            self.assertTrue(any("recommended_exact" in error for error in errors))
+
             report.write_text(
                 "<!-- - conclusion_type: demand_hypothesis_only -->\n\n"
                 + effect_table,
@@ -947,7 +984,19 @@ class EvalGradeBindingTests(unittest.TestCase):
                 case, result, workdir, [], []
             )
             self.assertFalse(passed)
-            self.assertTrue(any("conclusion line" in error for error in errors))
+            self.assertTrue(any("exactly one" in error for error in errors))
+
+            report.write_text(
+                "- conclusion_type: demand_hypothesis_only\n"
+                "- conclusion_type: commercial_recommendation\n\n"
+                + effect_table,
+                encoding="utf-8",
+            )
+            passed, errors, _ = eval_runner.grade_case(
+                case, result, workdir, [], []
+            )
+            self.assertFalse(passed)
+            self.assertTrue(any("exactly one" in error for error in errors))
 
 
 class EvalInfrastructureTests(unittest.TestCase):

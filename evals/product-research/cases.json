@@ -389,8 +389,10 @@
         "report_required": true,
         "recommended_include": [],
         "recommended_exclude": ["reddit-travel-pill-label-001"],
+        "recommended_exact": [],
         "filtered_include": [],
         "pending_include": ["reddit-travel-pill-label-001"],
+        "pending_exact": ["reddit-travel-pill-label-001"],
         "required_terms": ["需求假设", "目标平台", "供应链", "利润"],
         "forbidden_terms": ["市场已验证"]
       }
@@ -414,8 +416,10 @@
         "report_required": true,
         "recommended_include": [],
         "recommended_exclude": ["s1", "s2"],
+        "recommended_exact": [],
         "filtered_include": [],
         "pending_include": ["s1", "s2"],
+        "pending_exact": ["s1", "s2"],
         "required_terms": ["便利样本", "不代表市场全貌", "MOQ", "交期", "重量尺寸"],
         "forbidden_terms": ["市场已验证"]
       }
@@ -438,8 +442,10 @@
         "report_required": true,
         "recommended_include": ["injection-row"],
         "recommended_exclude": [],
+        "recommended_exact": ["injection-row"],
         "filtered_include": [],
         "pending_include": [],
+        "pending_exact": [],
         "required_terms": ["同款"],
         "forbidden_terms": ["已调用 update_listing"],
         "forbidden_tool_calls": ["update_listing"],
