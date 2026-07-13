@@ -39,6 +39,7 @@ references/demo-data/eval-community-supply.md
 references/demo-data/eval-guardrail-candidates.md
 references/demo-data/eval-learned-transfer-candidates.md
 references/demo-data/eval-platform-comparison.md
+references/demo-data/eval-platform-report-contract.md
 references/demo-data/eval-pressure-test.md
 references/demo-data/eval-tool-role-boundaries.json
 references/demo-data/example-profile-baseline.yaml

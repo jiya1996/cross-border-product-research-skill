@@ -34,6 +34,7 @@ REQUIRED_FILES = [
     "references/demo-data/example-profile-baseline.yaml",
     "references/demo-data/eval-tool-role-boundaries.json",
     "references/demo-data/eval-learned-transfer-candidates.md",
+    "references/demo-data/eval-platform-report-contract.md",
     "references/freight.md",
     "references/platform-fees.md",
     "references/demo-script.md",
@@ -161,6 +162,17 @@ def main() -> None:
     for rel in REQUIRED_FILES:
         if not (ROOT / rel).is_file():
             fail(f"missing {rel}")
+
+    public_manifest = {
+        line.strip()
+        for line in (ROOT / "config/public-release-files.txt")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    }
+    for rel in REQUIRED_FILES:
+        if rel not in public_manifest:
+            fail(f"public release manifest missing required file: {rel}")
 
     for duplicate in [
         "intake-interview.md",
