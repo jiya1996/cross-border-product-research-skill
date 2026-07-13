@@ -252,6 +252,7 @@ def static_validate(cases: list[dict]) -> None:
         ROOT / "references" / "data-sources" / "1688-supply-validation.md",
         ROOT / "references" / "demo-data" / "eval-tool-role-boundaries.json",
         ROOT / "references" / "demo-data" / "eval-learned-transfer-candidates.md",
+        ROOT / "references" / "demo-data" / "eval-platform-comparison.md",
         ROOT / "scripts" / "check_data_access.py",
         ROOT / "scripts" / "reset_demo.py",
     ]
@@ -276,6 +277,17 @@ def static_validate(cases: list[dict]) -> None:
             raise SystemExit(
                 f"Case {case_id} must bind the controlled pre-rule competition baseline"
             )
+    for case_id in ("P01A", "P01B"):
+        prompt = cases_by_id[case_id].get("prompt", "")
+        for field in (
+            "controlled_initial_investment_cny",
+            "controlled_cash_cycle_days",
+            "hard_constraint_status",
+        ):
+            if field not in prompt:
+                raise SystemExit(
+                    f"Case {case_id} must bind controlled platform field {field}"
+                )
     transfer_markdown = (
         ROOT / "references/demo-data/eval-learned-transfer-candidates.md"
     ).read_text(encoding="utf-8")
@@ -309,6 +321,30 @@ def static_validate(cases: list[dict]) -> None:
         if control["status"] != "pass_synthetic":
             raise SystemExit(
                 f"Learned transfer {candidate_id} hard_constraint_status must be pass_synthetic"
+            )
+    platform_markdown = (
+        ROOT / "references/demo-data/eval-platform-comparison.md"
+    ).read_text(encoding="utf-8")
+    try:
+        platform_hard_constraints = parse_controlled_hard_constraints(
+            platform_markdown, id_field="candidate_id"
+        )
+    except ValueError as exc:
+        raise SystemExit(f"Invalid controlled platform fixture: {exc}") from exc
+    if set(platform_hard_constraints) != {"platform-search", "platform-visual"}:
+        raise SystemExit("Controlled platform fixture candidate set is not exact")
+    for candidate_id, control in platform_hard_constraints.items():
+        if not 0 < control["investment_cny"] <= capital_limit:
+            raise SystemExit(
+                f"Controlled platform {candidate_id} investment violates profile limit"
+            )
+        if not 0 < control["cash_cycle_days"] <= cash_limit:
+            raise SystemExit(
+                f"Controlled platform {candidate_id} cash cycle violates profile limit"
+            )
+        if control["status"] != "pass_synthetic":
+            raise SystemExit(
+                f"Controlled platform {candidate_id} hard_constraint_status must be pass_synthetic"
             )
 
     for case in cases:
@@ -1477,11 +1513,13 @@ def parse_controlled_competition_baselines(markdown: str) -> dict[str, float]:
     raise ValueError("learned transfer fixture baseline column is missing")
 
 
-def parse_controlled_hard_constraints(markdown: str) -> dict[str, dict[str, Any]]:
-    """Parse synthetic hard-constraint controls from the learned-transfer fixture."""
+def parse_controlled_hard_constraints(
+    markdown: str, *, id_field: str = "id"
+) -> dict[str, dict[str, Any]]:
+    """Parse synthetic hard-constraint controls from a visible fixture."""
 
     required = (
-        "id",
+        id_field,
         "controlled_initial_investment_cny",
         "controlled_cash_cycle_days",
         "hard_constraint_status",
@@ -1500,17 +1538,17 @@ def parse_controlled_hard_constraints(markdown: str) -> dict[str, dict[str, Any]
                 break
             cells = [cell.strip().strip("`") for cell in row.strip().strip("|").split("|")]
             if max(positions.values()) >= len(cells):
-                raise ValueError("learned transfer hard-constraint row is incomplete")
-            candidate_id = cells[positions["id"]]
+                raise ValueError("controlled hard-constraint row is incomplete")
+            candidate_id = cells[positions[id_field]]
             if not candidate_id or candidate_id in controls:
-                raise ValueError("learned transfer hard-constraint IDs must be unique")
+                raise ValueError("controlled hard-constraint IDs must be unique")
             try:
                 investment = float(cells[positions["controlled_initial_investment_cny"]])
                 cash_days = float(cells[positions["controlled_cash_cycle_days"]])
             except ValueError as exc:
-                raise ValueError("learned transfer hard constraints must be numeric") from exc
+                raise ValueError("controlled hard constraints must be numeric") from exc
             if not math.isfinite(investment) or not math.isfinite(cash_days):
-                raise ValueError("learned transfer hard constraints must be finite")
+                raise ValueError("controlled hard constraints must be finite")
             controls[candidate_id] = {
                 "investment_cny": investment,
                 "cash_cycle_days": cash_days,
@@ -1519,7 +1557,42 @@ def parse_controlled_hard_constraints(markdown: str) -> dict[str, dict[str, Any]
         if not controls:
             raise ValueError("learned transfer hard-constraint table is empty")
         return controls
-    raise ValueError("learned transfer hard-constraint columns are missing")
+    raise ValueError("controlled hard-constraint columns are missing")
+
+
+def controlled_platform_result_errors(
+    case_id: str,
+    result: dict[str, Any],
+    controlled_candidate_ids: set[str],
+    expected_top: str,
+) -> list[str]:
+    """Validate one side of the controlled Amazon/TikTok routing experiment."""
+
+    errors = controlled_effect_result_errors(
+        case_id, result, controlled_candidate_ids
+    )
+    recommended = {
+        item.get("candidate_id"): item
+        for item in result.get("recommended", [])
+        if isinstance(item, dict) and isinstance(item.get("candidate_id"), str)
+    }
+    if set(recommended) != controlled_candidate_ids:
+        errors.append(f"{case_id} candidate set must equal the controlled platform fixture")
+    ranks = [item.get("rank") for item in recommended.values()]
+    valid_ranks = all(
+        isinstance(rank, int) and not isinstance(rank, bool) for rank in ranks
+    )
+    if not valid_ranks or sorted(ranks) != list(
+        range(1, len(controlled_candidate_ids) + 1)
+    ):
+        errors.append(f"{case_id} ranks must be the exact consecutive controlled ordering")
+    if expected_top not in recommended or recommended[expected_top].get("rank") != 1:
+        errors.append(f"{case_id} expected controlled top candidate {expected_top}")
+    if result.get("filtered") != []:
+        errors.append(f"{case_id} controlled platform filtered must be empty")
+    if result.get("blocked_pending_data") != []:
+        errors.append(f"{case_id} controlled platform blocked_pending_data must be empty")
+    return errors
 
 
 def controlled_single_case_errors(
@@ -1845,14 +1918,36 @@ def grade_case(
                     case["id"], result, controlled_baselines
                 )
             )
+    if case.get("id") in {"P01A", "P01B"}:
+        try:
+            platform_controls = parse_controlled_hard_constraints(
+                (
+                    ROOT / "references/demo-data/eval-platform-comparison.md"
+                ).read_text(encoding="utf-8"),
+                id_field="candidate_id",
+            )
+        except (OSError, ValueError) as exc:
+            errors.append(
+                f"controlled platform fixture could not be loaded: {type(exc).__name__}"
+            )
+        else:
+            expected_top = {
+                "P01A": "platform-search",
+                "P01B": "platform-visual",
+            }[case["id"]]
+            errors.extend(
+                controlled_platform_result_errors(
+                    case["id"], result, set(platform_controls), expected_top
+                )
+            )
 
     report_text = report.read_text(encoding="utf-8") if report and report.is_file() else ""
     errors.extend(grade_report_rule_effects(report_text, result.get("rule_effects")))
     combined = json.dumps(result, ensure_ascii=False) + "\n" + report_text
-    if case.get("id") in {"L01", "L02"} and not any(
+    if case.get("id") in {"L01", "L02", "P01A", "P01B"} and not any(
         term in combined for term in ("hypothesis-only", "合成假设", "受控 effect")
     ):
-        errors.append("controlled learned report missing hypothesis-only disclosure")
+        errors.append("controlled experiment report missing hypothesis-only disclosure")
     for term in expected["required_terms"]:
         if term not in combined:
             errors.append(f"required term missing: {term}")

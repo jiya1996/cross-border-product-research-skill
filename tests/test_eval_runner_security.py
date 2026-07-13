@@ -540,6 +540,80 @@ class EvalRuleEffectTests(unittest.TestCase):
             eval_runner.parse_controlled_hard_constraints(fixture),
         )
 
+    def test_controlled_platform_route_binds_candidates_top_rank_and_unknown_margin(self) -> None:
+        def candidate(candidate_id: str, rank: int) -> dict:
+            return {
+                "candidate_id": candidate_id,
+                "rank": rank,
+                "scores": {
+                    "demand": 4,
+                    "competition": 3,
+                    "margin": None,
+                    "capability_fit": 4,
+                    "risk": 4,
+                },
+                "total_score": None,
+            }
+
+        result = {
+            "recommended": [
+                candidate("platform-search", 1),
+                candidate("platform-visual", 2),
+            ],
+            "filtered": [],
+            "blocked_pending_data": [],
+            "manual_verification": ["完整成本与毛利需人工核实"],
+        }
+        candidate_ids = {"platform-search", "platform-visual"}
+        self.assertEqual(
+            [],
+            eval_runner.controlled_platform_result_errors(
+                "P01A", result, candidate_ids, "platform-search"
+            ),
+        )
+        wrong_top = json.loads(json.dumps(result))
+        wrong_top["recommended"][0]["rank"] = 2
+        wrong_top["recommended"][1]["rank"] = 1
+        errors = eval_runner.controlled_platform_result_errors(
+            "P01A", wrong_top, candidate_ids, "platform-search"
+        )
+        self.assertTrue(any("top candidate" in error for error in errors))
+        malformed_rank = json.loads(json.dumps(result))
+        malformed_rank["recommended"][0]["rank"] = None
+        errors = eval_runner.controlled_platform_result_errors(
+            "P01A", malformed_rank, candidate_ids, "platform-search"
+        )
+        self.assertTrue(any("ranks" in error for error in errors))
+        pending = json.loads(json.dumps(result))
+        pending["blocked_pending_data"] = [
+            {"candidate_id": "platform-search", "missing_fields": ["真实成本"]}
+        ]
+        errors = eval_runner.controlled_platform_result_errors(
+            "P01A", pending, candidate_ids, "platform-search"
+        )
+        self.assertTrue(any("blocked_pending_data" in error for error in errors))
+
+        fixture = (
+            ROOT / "references/demo-data/eval-platform-comparison.md"
+        ).read_text(encoding="utf-8")
+        self.assertEqual(
+            {
+                "platform-search": {
+                    "investment_cny": 6200.0,
+                    "cash_cycle_days": 35.0,
+                    "status": "pass_synthetic",
+                },
+                "platform-visual": {
+                    "investment_cny": 5800.0,
+                    "cash_cycle_days": 30.0,
+                    "status": "pass_synthetic",
+                },
+            },
+            eval_runner.parse_controlled_hard_constraints(
+                fixture, id_field="candidate_id"
+            ),
+        )
+
 
 class EvalGradeBindingTests(unittest.TestCase):
     def case(self) -> dict:
