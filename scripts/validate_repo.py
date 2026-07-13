@@ -205,6 +205,15 @@ def main() -> None:
         fail("demo decisions should contain >=3 repeated rejection evidence")
     validate_learned_evidence()
 
+    guardrail_fixture = (
+        ROOT / "references/demo-data/eval-guardrail-candidates.md"
+    ).read_text(encoding="utf-8")
+    safe_visual_rows = [
+        line for line in guardrail_fixture.splitlines() if line.startswith("| safe-visual |")
+    ]
+    if len(safe_visual_rows) != 1 or "塑料齿梳结构，常规普货低风险" not in safe_visual_rows[0]:
+        fail("guardrail fixture safe-visual must remain an unambiguous positive control")
+
     run_demo = (ROOT / "scripts/run_demo.py").read_text(encoding="utf-8")
     for needle in [
         "--seller-id",
