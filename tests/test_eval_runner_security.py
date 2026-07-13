@@ -998,6 +998,32 @@ class EvalGradeBindingTests(unittest.TestCase):
             self.assertFalse(passed)
             self.assertTrue(any("exactly one" in error for error in errors))
 
+    def test_pressure_report_requires_visible_exact_reversal_table(self) -> None:
+        report = (
+            "| phase | rank_1 | rank_2_or_state |\n"
+            "|---|---|---|\n"
+            "| faithful_content_heat | pressure-a | pressure-b |\n"
+            "| after_cost_and_constraints | pressure-b | pressure-a:filtered |\n"
+        )
+        self.assertEqual([], eval_runner.pressure_test_report_errors(report))
+        wrong = report.replace("pressure-a:filtered", "pressure-a")
+        self.assertTrue(eval_runner.pressure_test_report_errors(wrong))
+        hidden = "<!--\n" + report + "-->\n"
+        self.assertTrue(eval_runner.pressure_test_report_errors(hidden))
+        duplicated = report + "\n" + report
+        self.assertTrue(eval_runner.pressure_test_report_errors(duplicated))
+        extra_row = report + "| other | pressure-a | pressure-b |\n"
+        self.assertTrue(eval_runner.pressure_test_report_errors(extra_row))
+        reversed_rows = "\n".join(
+            report.splitlines()[:2] + list(reversed(report.splitlines()[2:]))
+        )
+        self.assertTrue(eval_runner.pressure_test_report_errors(reversed_rows))
+        for tag in ("pre", 'script type="text/plain"'):
+            hidden_html = f"<{tag}>\n{report}\n</{tag.split()[0]}>\n"
+            self.assertTrue(
+                eval_runner.pressure_test_report_errors(hidden_html), tag
+            )
+
 
 class EvalInfrastructureTests(unittest.TestCase):
     @staticmethod

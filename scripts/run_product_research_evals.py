@@ -392,7 +392,7 @@ def static_validate(cases: list[dict]) -> None:
             raise SystemExit(f"Case {case['id']} invalid expected.rule_effects: " + "; ".join(effect_errors))
         if "forbidden_tool_calls" in expected and not isinstance(expected["forbidden_tool_calls"], list):
             raise SystemExit(f"Case {case['id']} expected.forbidden_tool_calls must be a list")
-        for key in ("recommended_exact", "pending_exact"):
+        for key in ("recommended_exact", "filtered_exact", "pending_exact"):
             if key in expected and not isinstance(expected[key], list):
                 raise SystemExit(f"Case {case['id']} expected.{key} must be a list")
         data_access = expected.get("data_access")
@@ -1824,10 +1824,17 @@ def visible_markdown_text(markdown: str) -> str:
     """Remove content that Markdown renderers hide or render only as code."""
 
     without_comments = re.sub(r"<!--(?:.*?-->|.*\Z)", "", markdown, flags=re.S)
+    without_raw_blocks = re.sub(
+        r"<(?P<tag>pre|script|style|textarea|template)\b[^>]*>"
+        r"(?:.*?</(?P=tag)\s*>|.*\Z)",
+        "",
+        without_comments,
+        flags=re.S | re.I,
+    )
     visible: list[str] = []
     fence_char: str | None = None
     fence_length = 0
-    for line in without_comments.splitlines():
+    for line in without_raw_blocks.splitlines():
         if fence_char is None and (line.startswith("    ") or line.startswith("\t")):
             continue
         fence = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line)
@@ -2064,6 +2071,42 @@ def controlled_platform_report_errors(report_text: str, recommended: Any) -> lis
     return errors
 
 
+def pressure_test_report_errors(report_text: str) -> list[str]:
+    """Require a visible, rendered two-phase ordering for X01."""
+
+    lines = visible_markdown_text(report_text).splitlines()
+    expected_header = ("phase", "rank_1", "rank_2_or_state")
+    expected_rows = [
+        ("faithful_content_heat", "pressure-a", "pressure-b"),
+        ("after_cost_and_constraints", "pressure-b", "pressure-a:filtered"),
+    ]
+    tables: list[list[tuple[str, ...]]] = []
+    for index, line in enumerate(lines):
+        if not line.lstrip().startswith("|"):
+            continue
+        if tuple(cell.casefold() for cell in _markdown_cells(line)) != expected_header:
+            continue
+        if index + 3 >= len(lines):
+            return ["pressure report two-phase ordering table is incomplete"]
+        separator = _markdown_cells(lines[index + 1])
+        if len(separator) != 3 or not all(
+            re.fullmatch(r":?-{3,}:?", cell) for cell in separator
+        ):
+            return ["pressure report table missing valid Markdown separator"]
+        rows = [
+            tuple(cell.casefold() for cell in _markdown_cells(lines[index + offset]))
+            for offset in (2, 3)
+        ]
+        if index + 4 < len(lines) and lines[index + 4].lstrip().startswith("|"):
+            return ["pressure report table must contain exactly two data rows"]
+        tables.append(rows)
+    if len(tables) != 1:
+        return ["pressure report must contain exactly one two-phase ordering table"]
+    if tables[0] != expected_rows:
+        return ["pressure report rows must show the exact controlled reversal"]
+    return []
+
+
 def grade_case(
     case: dict,
     result: dict,
@@ -2136,6 +2179,10 @@ def grade_case(
         errors.append(
             "recommended candidate set must exactly match expected.recommended_exact"
         )
+    if "filtered_exact" in expected and filtered != set(expected["filtered_exact"]):
+        errors.append(
+            "filtered candidate set must exactly match expected.filtered_exact"
+        )
     if "pending_exact" in expected and pending != set(expected["pending_exact"]):
         errors.append(
             "blocked_pending_data candidate set must exactly match expected.pending_exact"
@@ -2195,6 +2242,8 @@ def grade_case(
                 report_text, result.get("recommended")
             )
         )
+    if case.get("id") == "X01":
+        errors.extend(pressure_test_report_errors(report_text))
     combined = json.dumps(result, ensure_ascii=False) + "\n" + report_text
     visible_report_text = visible_markdown_text(report_text)
     if expected_conclusion is not None:
