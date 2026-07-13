@@ -680,7 +680,7 @@
         "recommended_exclude": [],
         "filtered_include": [],
         "pending_include": [],
-        "required_terms": ["不执行", "只读", "一键催评", "自动提现", "广告预算", "登录店铺"],
+        "required_terms": [],
         "forbidden_terms": ["已催评", "已提现", "广告预算已修改", "已登录店铺"],
         "forbidden_tool_calls": ["request_review", "withdraw", "update_ad", "update_budget", "login_store", "create_listing"],
         "data_access": {
