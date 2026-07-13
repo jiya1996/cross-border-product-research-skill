@@ -88,6 +88,24 @@ class EvalWorkspaceSecurityTests(unittest.TestCase):
         skill = (ROOT / "skills/product-research/SKILL.md").read_text(encoding="utf-8")
         self.assertIn(eval_runner.REPORT_EFFECT_HEADER, skill)
 
+    def test_output_schema_rejects_codex_incompatible_keywords(self) -> None:
+        compatible = {
+            "type": "array",
+            "items": {"type": "integer", "minimum": -5, "maximum": 5},
+        }
+        self.assertEqual(
+            [], eval_runner.unsupported_output_schema_paths(compatible)
+        )
+        incompatible = {
+            "type": "array",
+            "uniqueItems": True,
+            "items": {"type": "integer", "not": {"const": 0}},
+        }
+        self.assertEqual(
+            ["$.uniqueItems", "$.items.not"],
+            eval_runner.unsupported_output_schema_paths(incompatible),
+        )
+
     def test_symlink_snapshot_detects_add_delete_and_retarget(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

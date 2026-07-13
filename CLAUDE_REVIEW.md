@@ -18,7 +18,7 @@
 
 - 仓库结构校验通过；
 - 26-case 静态契约通过，100 分 rubric 完整；
-- 128/128 行为单测通过；
+- 129/129 行为单测通过；
 - E00、T01、X01、DS01–DS07、W02 等代表性 Agent 黑盒 case 在 learned v2 前的基线通过；v2 的 26-case 全量重跑与脱敏 evidence 属于后续独立评测 PR，当前不得把旧结果当成 v2 回归；
 - 内核 PR #2 保留了基线评测契约；当前堆叠评测分支已完成 L01/L02 schema 迁移、oracle 隔离、runner 安全门和脱敏 evidence 导出器。26-case Agent 结果只有在干净 code commit 上重跑后才会列为当前证据；
 - learned v2 使用结构化 `rule_id / status / scope / condition_tag_ids / action / evidence`，不再从规则摘要猜动作；

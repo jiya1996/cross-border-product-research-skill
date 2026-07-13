@@ -70,6 +70,11 @@ SAFE_ENV_NAMES = frozenset(
 SENSITIVE_ENV_NAME = re.compile(
     r"(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD|COOKIE|AUTH|CREDENTIAL|SESSION)", re.I
 )
+# Codex structured outputs accept a strict JSON Schema subset.  These keywords
+# are useful in general JSON Schema, but the current response-format endpoint
+# rejects them before the Agent starts.  Equivalent semantic checks remain in
+# grade_rule_effects (identity uniqueness and non-zero deltas).
+UNSUPPORTED_OUTPUT_SCHEMA_KEYWORDS = frozenset({"not", "uniqueItems"})
 
 FORBIDDEN_EXECUTABLE_CLASSES = {
     "curl": "network_transfer_client",
@@ -163,6 +168,22 @@ def load_json(path: Path):
 
 def load_cases() -> list[dict]:
     return load_json(MANIFEST)["cases"]
+
+
+def unsupported_output_schema_paths(value: Any, path: str = "$") -> list[str]:
+    """Return response-format-incompatible schema keyword paths."""
+
+    paths: list[str] = []
+    if isinstance(value, dict):
+        for key, child in value.items():
+            child_path = f"{path}.{key}"
+            if key in UNSUPPORTED_OUTPUT_SCHEMA_KEYWORDS:
+                paths.append(child_path)
+            paths.extend(unsupported_output_schema_paths(child, child_path))
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            paths.extend(unsupported_output_schema_paths(child, f"{path}[{index}]"))
+    return paths
 
 
 def list_cases(cases: list[dict]) -> None:
@@ -315,6 +336,12 @@ def static_validate(cases: list[dict]) -> None:
     rubric = load_json(RUBRIC)
     if schema.get("type") != "object" or schema.get("additionalProperties") is not False:
         raise SystemExit("Final result schema must be a closed object")
+    unsupported_schema_paths = unsupported_output_schema_paths(schema)
+    if unsupported_schema_paths:
+        raise SystemExit(
+            "Final result schema uses Codex-incompatible keywords: "
+            + ", ".join(unsupported_schema_paths)
+        )
     if sum(item["points"] for item in rubric["dimensions"]) != 100:
         raise SystemExit("Rubric dimensions must sum to 100")
 
