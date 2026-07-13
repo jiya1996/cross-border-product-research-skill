@@ -614,6 +614,19 @@ class EvalRuleEffectTests(unittest.TestCase):
         )
         self.assertTrue(any("synthetic_demo" in error for error in errors))
         self.assertTrue(any("provenance" in error for error in errors))
+        extra_source = json.loads(json.dumps(result))
+        extra_source["data_access"]["sources_used"].append(
+            {
+                "provider": "live_market",
+                "provider_variant": "other",
+                "source_role": "direct_market_data",
+                "read_operations": ["read live source"],
+            }
+        )
+        errors = eval_runner.controlled_platform_result_errors(
+            "P01A", extra_source, candidate_ids, "platform-search"
+        )
+        self.assertTrue(any("provenance" in error for error in errors))
         denied_read = json.loads(json.dumps(result))
         denied_read["data_access"]["sources_used"][0]["provider"] = "live_market"
         denied_read["data_access"]["sources_used"][0]["read_operations"] = [
@@ -626,8 +639,9 @@ class EvalRuleEffectTests(unittest.TestCase):
 
         report = (
             "# 合成假设 hypothesis-only\n\n"
-            "data mode: synthetic_demo\n\n"
-            "source: references/demo-data/eval-platform-comparison.md\n\n"
+            "- data_access.mode: synthetic_demo\n"
+            "- controlled_source: references/demo-data/eval-platform-comparison.md\n"
+            "- live_market_data_verified: false\n\n"
             "真实市场数据链路未验证。\n\n"
             "| candidate_id | rank | demand | competition | margin | capability_fit | risk | total_score |\n"
             "|---|---:|---:|---:|---:|---:|---:|---:|\n"
@@ -651,20 +665,28 @@ class EvalRuleEffectTests(unittest.TestCase):
             "实际测算毛利率为20%",
             "total_score：5",
             "最终总分约5",
+            "完整商业总分为5",
+            "预估毛利率达到20%",
         ):
             errors = eval_runner.controlled_platform_report_errors(
                 report + "\n" + claim, result["recommended"]
             )
             self.assertTrue(any("numeric margin" in error for error in errors), claim)
         negated_report = report + "\n没有证据支持实际毛利率为20%。\n"
-        self.assertFalse(
-            any(
-                "numeric margin" in error
-                for error in eval_runner.controlled_platform_report_errors(
-                    negated_report, result["recommended"]
-                )
-            )
+        errors = eval_runner.controlled_platform_report_errors(
+            negated_report, result["recommended"]
         )
+        self.assertTrue(any("numeric margin" in error for error in errors))
+        post_negated_report = report + "\n所谓实际毛利率为20%并未验证。\n"
+        errors = eval_runner.controlled_platform_report_errors(
+            post_negated_report, result["recommended"]
+        )
+        self.assertTrue(any("numeric margin" in error for error in errors))
+        source_denial = report + "\n未使用 references/demo-data/eval-platform-comparison.md。\n"
+        errors = eval_runner.controlled_platform_report_errors(
+            source_denial, result["recommended"]
+        )
+        self.assertTrue(any("contradicts" in error for error in errors))
         hidden_report = (
             "<!--\n"
             + report
@@ -681,6 +703,23 @@ class EvalRuleEffectTests(unittest.TestCase):
             fenced_report, result["recommended"]
         )
         self.assertTrue(any("candidate table" in error for error in errors))
+        invalid_close = "```markdown\n```not-a-close\n" + report + "\n```\n"
+        errors = eval_runner.controlled_platform_report_errors(
+            invalid_close, result["recommended"]
+        )
+        self.assertTrue(any("candidate table" in error for error in errors))
+        indented_report = "\n".join("    " + line for line in report.splitlines())
+        errors = eval_runner.controlled_platform_report_errors(
+            indented_report, result["recommended"]
+        )
+        self.assertTrue(any("candidate table" in error for error in errors))
+        missing_separator = report.replace(
+            "|---|---:|---:|---:|---:|---:|---:|---:|\n", ""
+        )
+        errors = eval_runner.controlled_platform_report_errors(
+            missing_separator, result["recommended"]
+        )
+        self.assertTrue(any("separator" in error for error in errors))
         divergent_report = report.replace(
             "| platform-search | 1 | 4 | 3 | N/A | 4 | 4 | N/A |",
             "| platform-search | 1 | 4 | 3 | 2 | 4 | 4 | 4 |",

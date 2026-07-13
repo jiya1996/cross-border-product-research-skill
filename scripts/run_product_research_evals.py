@@ -1600,22 +1600,14 @@ def controlled_platform_result_errors(
         errors.append(f"{case_id} controlled platform mode must be synthetic_demo")
     sources = access.get("sources_used")
     fixture_path = "references/demo-data/eval-platform-comparison.md"
-    fixture_source = False
-    if isinstance(sources, list):
-        for source in sources:
-            if (
-                not isinstance(source, dict)
-                or source.get("provider") != "repository_fixture"
-                or source.get("provider_variant") != "eval_platform_comparison"
-                or source.get("source_role") != "direct_market_data"
-            ):
-                continue
-            operations = source.get("read_operations")
-            if operations == [f"read {fixture_path}"]:
-                fixture_source = True
-                break
-    if not fixture_source:
-        errors.append(f"{case_id} controlled platform fixture provenance missing")
+    expected_source = {
+        "provider": "repository_fixture",
+        "provider_variant": "eval_platform_comparison",
+        "source_role": "direct_market_data",
+        "read_operations": [f"read {fixture_path}"],
+    }
+    if sources != [expected_source]:
+        errors.append(f"{case_id} controlled platform fixture provenance must be exact")
     if access.get("collectors_used") != []:
         errors.append(f"{case_id} controlled platform collectors_used must be empty")
     return errors
@@ -1804,7 +1796,9 @@ def visible_markdown_text(markdown: str) -> str:
     fence_char: str | None = None
     fence_length = 0
     for line in without_comments.splitlines():
-        fence = re.match(r"^ {0,3}(`{3,}|~{3,})", line)
+        if fence_char is None and (line.startswith("    ") or line.startswith("\t")):
+            continue
+        fence = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line)
         if fence_char is None:
             if fence:
                 fence_char = fence.group(1)[0]
@@ -1812,7 +1806,12 @@ def visible_markdown_text(markdown: str) -> str:
                 continue
             visible.append(line)
             continue
-        if fence and fence.group(1)[0] == fence_char and len(fence.group(1)) >= fence_length:
+        if (
+            fence
+            and fence.group(1)[0] == fence_char
+            and len(fence.group(1)) >= fence_length
+            and not fence.group(2).strip()
+        ):
             fence_char = None
             fence_length = 0
     return "\n".join(visible)
@@ -1838,12 +1837,17 @@ def grade_report_rule_effects(report_text: str, actual: Any) -> list[str]:
             continue
         found_header = True
         index += 1
+        valid_separator = False
         if index < len(lines) and lines[index].lstrip().startswith("|"):
             separators = _markdown_cells(lines[index])
             if len(separators) == len(REPORT_EFFECT_COLUMNS) and all(
                 re.fullmatch(r":?-{3,}:?", cell) for cell in separators
             ):
+                valid_separator = True
                 index += 1
+        if not valid_separator:
+            errors.append("report rule-effect table missing valid Markdown separator")
+            continue
         while index < len(lines) and lines[index].lstrip().startswith("|"):
             cells = _markdown_cells(lines[index])
             index += 1
@@ -1922,12 +1926,17 @@ def grade_report_candidate_scores(report_text: str, recommended: Any) -> list[st
             continue
         found_header = True
         index += 1
+        valid_separator = False
         if index < len(lines) and lines[index].lstrip().startswith("|"):
             separators = _markdown_cells(lines[index])
             if len(separators) == len(REPORT_CANDIDATE_COLUMNS) and all(
                 re.fullmatch(r":?-{3,}:?", cell) for cell in separators
             ):
+                valid_separator = True
                 index += 1
+        if not valid_separator:
+            errors.append("report candidate table missing valid Markdown separator")
+            continue
         while index < len(lines) and lines[index].lstrip().startswith("|"):
             cells = _markdown_cells(lines[index])
             index += 1
@@ -1983,37 +1992,40 @@ def controlled_platform_report_errors(report_text: str, recommended: Any) -> lis
     report_text = visible_markdown_text(report_text)
     errors = grade_report_candidate_scores(report_text, recommended)
     for required in (
-        "synthetic_demo",
-        "references/demo-data/eval-platform-comparison.md",
+        "- data_access.mode: synthetic_demo",
+        "- controlled_source: references/demo-data/eval-platform-comparison.md",
+        "- live_market_data_verified: false",
         "真实市场数据链路未验证",
     ):
         if required not in report_text:
             errors.append(f"controlled platform report missing disclosure: {required}")
-    claim = re.compile(
+    metric = re.compile(
         r"(?:"
         r"(?:实际(?:测算)?|真实|最终|完整)(?:测算)?(?:毛利|利润)(?:率)?|"
-        r"(?:完整|最终|商业)(?:测算)?总分|"
+        r"(?:(?:完整|最终)(?:商业)?|商业)(?:测算)?总分|"
+        r"(?:已知成本口径|完整成本口径|预估|预计|估算)(?:毛利|利润)(?:率)?|"
         r"(?<![\w])total_score(?![\w])|"
         r"(?<![\w])(?:actual|real|final)\s+(?:margin|profit)(?![\w])"
-        r")"
-        r"\s*(?:为|是|约(?:为)?|大约(?:为)?|估计(?:为)?|≈|=|:|：)?\s*[+-]?\d",
+        r")",
         re.I,
     )
-    negation = re.compile(
-        r"(?:没有|无)证据(?:支持|表明|证明)?|"
-        r"(?:不得|不能|不可|不应|禁止)(?:声称|认定|写成|输出)?|"
-        r"不代表|并非|不是|未(?:验证|核实|确认)",
-        re.I,
-    )
-    affirmative_claim = False
-    for match in claim.finditer(report_text):
-        prefix = report_text[max(0, match.start() - 64) : match.start()]
-        clause = re.split(r"[。！？；;，,\n]", prefix)[-1]
-        if not negation.search(clause):
-            affirmative_claim = True
+    numeric = re.compile(r"\d|[零〇一二两三四五六七八九十百千万]")
+    numeric_commercial_claim = False
+    for line in report_text.splitlines():
+        for clause in re.split(r"[。！？；;，,]", line):
+            if metric.search(clause) and numeric.search(clause):
+                numeric_commercial_claim = True
+                break
+        if numeric_commercial_claim:
             break
-    if affirmative_claim:
+    if numeric_commercial_claim:
         errors.append("controlled platform report asserts numeric margin or total score")
+    source_path = re.escape("references/demo-data/eval-platform-comparison.md")
+    if re.search(
+        rf"(?:未|没有|并未|不曾)(?:读取|使用|采用).{{0,24}}{source_path}",
+        report_text,
+    ):
+        errors.append("controlled platform report contradicts fixture provenance")
     return errors
 
 
