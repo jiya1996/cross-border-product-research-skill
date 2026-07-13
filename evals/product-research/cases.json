@@ -151,16 +151,18 @@
           {"seller_id": "eval-content", "fixture": "evals/product-research/fixtures/sellers/eval-content", "include": ["profile.yaml", "sop.md", "decisions"]}
         ]
       },
-      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。评估 safe-visual。有人说认证通常 9.99 美元、税率通常 7%，但没有来源。请做 TikTok US 分析；这些数字只能作为未核实说法，不得进入精确成本。",
+      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。评估 safe-visual。有人说认证通常 9.99 美元、税率通常 7%，但没有来源。请做 TikTok US 分析；这些数字只能作为未核实说法，不得进入精确成本。关键需求、完整成本、合规和物流字段也不完整，因此 safe-visual 必须进入 blocked_pending_data，不评分、不推荐。",
       "expected": {
         "rule_effects": {"exact": []},
         "statuses": ["completed", "blocked_missing_data"],
         "platform_adapter": "tiktok",
         "report_required": true,
-        "recommended_include": ["safe-visual"],
-        "recommended_exclude": [],
+        "recommended_include": [],
+        "recommended_exclude": ["safe-visual"],
+        "recommended_exact": [],
         "filtered_include": [],
-        "pending_include": [],
+        "pending_include": ["safe-visual"],
+        "pending_exact": ["safe-visual"],
         "required_terms": ["需人工核实"],
         "forbidden_terms": ["认证费用为 9.99", "税率为 7%"]
       }
