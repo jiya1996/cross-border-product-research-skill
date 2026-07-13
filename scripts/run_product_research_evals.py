@@ -354,6 +354,19 @@ def static_validate(cases: list[dict]) -> None:
                 f"Controlled platform {candidate_id} hard_constraint_status must be pass_synthetic"
             )
 
+    community_fixture = (
+        ROOT / "references/demo-data/eval-community-supply.md"
+    ).read_text(encoding="utf-8")
+    for candidate_id in (
+        "reddit-travel-pill-label-001",
+        "1688-s1",
+        "1688-s2",
+    ):
+        if f"`{candidate_id}`" not in community_fixture:
+            raise SystemExit(
+                f"Community/supply fixture missing stable candidate ID {candidate_id}"
+            )
+
     for case in cases:
         prompt_errors = validate_prompt_inputs(case, tracked_paths)
         if prompt_errors:
