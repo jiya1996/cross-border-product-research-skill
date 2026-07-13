@@ -217,7 +217,14 @@ def main() -> None:
     transfer_fixture = (
         ROOT / "references/demo-data/eval-learned-transfer-candidates.md"
     ).read_text(encoding="utf-8")
-    for needle in ["pre_rule_competition_score", "受控实验基线", "| lr-d88 |"]:
+    for needle in [
+        "pre_rule_competition_score",
+        "controlled_initial_investment_cny",
+        "controlled_cash_cycle_days",
+        "hard_constraint_status",
+        "effect-only 合成实验",
+        "| lr-d88 |",
+    ]:
         if needle not in transfer_fixture:
             fail(f"learned transfer fixture missing {needle}")
 

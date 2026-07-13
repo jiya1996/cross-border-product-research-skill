@@ -422,12 +422,26 @@ class EvalRuleEffectTests(unittest.TestCase):
         self.assertTrue(any("score must equal" in error for error in errors))
 
     def test_proposed_active_pair_binds_before_after_and_negative_control(self) -> None:
+        def candidate(candidate_id: str, competition: int) -> dict:
+            return {
+                "candidate_id": candidate_id,
+                "scores": {
+                    "demand": 3,
+                    "competition": competition,
+                    "margin": None,
+                    "capability_fit": 4,
+                    "risk": 4,
+                },
+                "total_score": None,
+            }
+
         proposed = {
             "rule_effects": [],
             "recommended": [
-                {"candidate_id": "hit", "scores": {"competition": 2}},
-                {"candidate_id": "control", "scores": {"competition": 3}},
+                candidate("hit", 2),
+                candidate("control", 3),
             ],
+            "manual_verification": ["完整成本与毛利需人工核实"],
         }
         active = {
             "rule_effects": [
@@ -441,9 +455,10 @@ class EvalRuleEffectTests(unittest.TestCase):
                 }
             ],
             "recommended": [
-                {"candidate_id": "hit", "scores": {"competition": 1}},
-                {"candidate_id": "control", "scores": {"competition": 3}},
+                candidate("hit", 1),
+                candidate("control", 3),
             ],
+            "manual_verification": ["complete cost and margin require verification"],
         }
         baselines = {"hit": 2, "control": 3}
         self.assertEqual(
@@ -451,6 +466,12 @@ class EvalRuleEffectTests(unittest.TestCase):
             eval_runner.learned_effect_pair_invariant_errors(
                 proposed, active, baselines
             ),
+        )
+        self.assertEqual(
+            [], eval_runner.controlled_single_case_errors("L01", proposed, baselines)
+        )
+        self.assertEqual(
+            [], eval_runner.controlled_single_case_errors("L02", active, baselines)
         )
         broken_before = json.loads(json.dumps(active))
         broken_before["rule_effects"][0]["before"] = 3
@@ -473,12 +494,50 @@ class EvalRuleEffectTests(unittest.TestCase):
         )
         self.assertTrue(any("negative control" in error for error in errors))
 
+        invalid_contract = json.loads(json.dumps(proposed))
+        invalid_contract["recommended"][0]["scores"]["demand"] = None
+        invalid_contract["recommended"][0]["scores"]["margin"] = 5
+        invalid_contract["recommended"][0]["total_score"] = 5
+        invalid_contract["manual_verification"] = []
+        errors = eval_runner.controlled_effect_result_errors(
+            "L01", invalid_contract, set(baselines)
+        )
+        self.assertTrue(any("demand" in error for error in errors))
+        self.assertTrue(any("margin must remain null" in error for error in errors))
+        self.assertTrue(any("total_score must remain null" in error for error in errors))
+        self.assertTrue(any("manual_verification" in error for error in errors))
+
         fixture = (
             ROOT / "references/demo-data/eval-learned-transfer-candidates.md"
         ).read_text(encoding="utf-8")
         self.assertEqual(
             {"lr-a17": 2.0, "lr-b42": 2.0, "lr-c63": 2.0, "lr-d88": 3.0},
             eval_runner.parse_controlled_competition_baselines(fixture),
+        )
+        self.assertEqual(
+            {
+                "lr-a17": {
+                    "investment_cny": 5200.0,
+                    "cash_cycle_days": 30.0,
+                    "status": "pass_synthetic",
+                },
+                "lr-b42": {
+                    "investment_cny": 5600.0,
+                    "cash_cycle_days": 35.0,
+                    "status": "pass_synthetic",
+                },
+                "lr-c63": {
+                    "investment_cny": 5000.0,
+                    "cash_cycle_days": 30.0,
+                    "status": "pass_synthetic",
+                },
+                "lr-d88": {
+                    "investment_cny": 6500.0,
+                    "cash_cycle_days": 35.0,
+                    "status": "pass_synthetic",
+                },
+            },
+            eval_runner.parse_controlled_hard_constraints(fixture),
         )
 
 
@@ -535,6 +594,25 @@ class EvalGradeBindingTests(unittest.TestCase):
                 }
             ],
         }
+
+    def test_candidate_state_buckets_are_disjoint_and_unique(self) -> None:
+        clean = {
+            "recommended": [{"candidate_id": "a"}],
+            "filtered": [{"candidate_id": "b"}],
+            "blocked_pending_data": [{"candidate_id": "c"}],
+        }
+        self.assertEqual([], eval_runner.grade_candidate_partitions(clean))
+        overlapping = {
+            **clean,
+            "blocked_pending_data": [
+                {"candidate_id": "a"},
+                {"candidate_id": "c"},
+                {"candidate_id": "c"},
+            ],
+        }
+        errors = eval_runner.grade_candidate_partitions(overlapping)
+        self.assertTrue(any("overlap" in error for error in errors))
+        self.assertTrue(any("duplicate" in error for error in errors))
 
     def test_result_seller_report_namespace_and_report_effect_trace_are_bound(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

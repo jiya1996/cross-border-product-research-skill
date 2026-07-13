@@ -251,6 +251,7 @@ def static_validate(cases: list[dict]) -> None:
         ROOT / "references" / "data-sources" / "hubu-collector-boundary.md",
         ROOT / "references" / "data-sources" / "1688-supply-validation.md",
         ROOT / "references" / "demo-data" / "eval-tool-role-boundaries.json",
+        ROOT / "references" / "demo-data" / "eval-learned-transfer-candidates.md",
         ROOT / "scripts" / "check_data_access.py",
         ROOT / "scripts" / "reset_demo.py",
     ]
@@ -274,6 +275,40 @@ def static_validate(cases: list[dict]) -> None:
         if "pre_rule_competition_score" not in cases_by_id[case_id].get("prompt", ""):
             raise SystemExit(
                 f"Case {case_id} must bind the controlled pre-rule competition baseline"
+            )
+    transfer_markdown = (
+        ROOT / "references/demo-data/eval-learned-transfer-candidates.md"
+    ).read_text(encoding="utf-8")
+    try:
+        controlled_baselines = parse_controlled_competition_baselines(transfer_markdown)
+        controlled_hard_constraints = parse_controlled_hard_constraints(transfer_markdown)
+    except ValueError as exc:
+        raise SystemExit(f"Invalid learned transfer fixture: {exc}") from exc
+    if set(controlled_baselines) != set(controlled_hard_constraints):
+        raise SystemExit("Learned transfer baseline and hard-constraint candidates must match")
+    profile_text = (
+        ROOT / "evals/product-research/fixtures/sellers/eval-content/profile.yaml"
+    ).read_text(encoding="utf-8")
+    capital_match = re.search(r"(?m)^\s*capital_per_sku_max:\s*([0-9.]+)\s*$", profile_text)
+    cash_match = re.search(
+        r"(?m)^\s*cash_cycle_tolerance_days:\s*([0-9.]+)\s*$", profile_text
+    )
+    if capital_match is None or cash_match is None:
+        raise SystemExit("eval-content profile missing controlled hard-constraint thresholds")
+    capital_limit = float(capital_match.group(1))
+    cash_limit = float(cash_match.group(1))
+    for candidate_id, control in controlled_hard_constraints.items():
+        if not 0 < control["investment_cny"] <= capital_limit:
+            raise SystemExit(
+                f"Learned transfer {candidate_id} investment violates controlled profile limit"
+            )
+        if not 0 < control["cash_cycle_days"] <= cash_limit:
+            raise SystemExit(
+                f"Learned transfer {candidate_id} cash cycle violates controlled profile limit"
+            )
+        if control["status"] != "pass_synthetic":
+            raise SystemExit(
+                f"Learned transfer {candidate_id} hard_constraint_status must be pass_synthetic"
             )
 
     for case in cases:
@@ -860,6 +895,34 @@ def collect_ids(items: list[dict]) -> set[str]:
     return {str(item.get("candidate_id")) for item in items}
 
 
+def grade_candidate_partitions(result: dict[str, Any]) -> list[str]:
+    """Require each candidate to occupy exactly one recommendation state bucket."""
+
+    errors: list[str] = []
+    buckets: dict[str, list[str]] = {}
+    for field in ("recommended", "filtered", "blocked_pending_data"):
+        items = result.get(field)
+        if not isinstance(items, list):
+            continue
+        candidate_ids = [
+            item.get("candidate_id")
+            for item in items
+            if isinstance(item, dict) and isinstance(item.get("candidate_id"), str)
+        ]
+        if len(candidate_ids) != len(set(candidate_ids)):
+            errors.append(f"{field} contains duplicate candidate IDs")
+        buckets[field] = candidate_ids
+    fields = tuple(buckets)
+    for left_index, left in enumerate(fields):
+        for right in fields[left_index + 1 :]:
+            overlap = sorted(set(buckets[left]) & set(buckets[right]))
+            if overlap:
+                errors.append(
+                    f"candidate state buckets overlap between {left} and {right}: {overlap}"
+                )
+    return errors
+
+
 def _shell_executables(command: str, _depth: int = 0) -> list[str]:
     """Best-effort extraction of executables without running or persisting a command."""
 
@@ -1331,6 +1394,54 @@ def _same_finite_number(left: Any, right: Any) -> bool:
     )
 
 
+def controlled_effect_result_errors(
+    label: str, result: dict[str, Any], controlled_candidate_ids: set[str]
+) -> list[str]:
+    """Validate the hypothesis-only four-dimension output contract for L01/L02."""
+
+    errors: list[str] = []
+    recommended = {
+        item.get("candidate_id"): item
+        for item in result.get("recommended", [])
+        if isinstance(item, dict) and isinstance(item.get("candidate_id"), str)
+    }
+    for candidate_id in sorted(controlled_candidate_ids):
+        candidate = recommended.get(candidate_id)
+        if candidate is None:
+            errors.append(f"{label} missing controlled recommendation {candidate_id}")
+            continue
+        scores = candidate.get("scores")
+        if not isinstance(scores, dict):
+            errors.append(f"{label} {candidate_id} scores must be an object")
+            continue
+        for dimension in ("demand", "competition", "capability_fit", "risk"):
+            score = scores.get(dimension)
+            if (
+                isinstance(score, bool)
+                or not isinstance(score, (int, float))
+                or not math.isfinite(float(score))
+                or not 0 <= score <= 5
+            ):
+                errors.append(
+                    f"{label} {candidate_id}/{dimension} must be a finite 0..5 score"
+                )
+        if scores.get("margin") is not None:
+            errors.append(f"{label} {candidate_id}/margin must remain null")
+        if candidate.get("total_score") is not None:
+            errors.append(f"{label} {candidate_id}/total_score must remain null")
+
+    manual = result.get("manual_verification")
+    if not isinstance(manual, list) or not manual or not all(
+        isinstance(item, str) and item.strip() for item in manual
+    ):
+        errors.append(f"{label} manual_verification must be a non-empty string list")
+    else:
+        combined = " ".join(manual).casefold()
+        if not any(keyword in combined for keyword in ("成本", "毛利", "cost", "margin")):
+            errors.append(f"{label} manual_verification must include cost or margin verification")
+    return errors
+
+
 def parse_controlled_competition_baselines(markdown: str) -> dict[str, float]:
     """Parse the learned-transfer experiment baseline from its visible fixture."""
 
@@ -1364,6 +1475,108 @@ def parse_controlled_competition_baselines(markdown: str) -> dict[str, float]:
             raise ValueError("learned transfer fixture baseline table is empty")
         return baselines
     raise ValueError("learned transfer fixture baseline column is missing")
+
+
+def parse_controlled_hard_constraints(markdown: str) -> dict[str, dict[str, Any]]:
+    """Parse synthetic hard-constraint controls from the learned-transfer fixture."""
+
+    required = (
+        "id",
+        "controlled_initial_investment_cny",
+        "controlled_cash_cycle_days",
+        "hard_constraint_status",
+    )
+    lines = markdown.splitlines()
+    for index, line in enumerate(lines):
+        if not line.lstrip().startswith("|"):
+            continue
+        header = [cell.strip().strip("`") for cell in line.strip().strip("|").split("|")]
+        if not set(required).issubset(header):
+            continue
+        positions = {field: header.index(field) for field in required}
+        controls: dict[str, dict[str, Any]] = {}
+        for row in lines[index + 2 :]:
+            if not row.lstrip().startswith("|"):
+                break
+            cells = [cell.strip().strip("`") for cell in row.strip().strip("|").split("|")]
+            if max(positions.values()) >= len(cells):
+                raise ValueError("learned transfer hard-constraint row is incomplete")
+            candidate_id = cells[positions["id"]]
+            if not candidate_id or candidate_id in controls:
+                raise ValueError("learned transfer hard-constraint IDs must be unique")
+            try:
+                investment = float(cells[positions["controlled_initial_investment_cny"]])
+                cash_days = float(cells[positions["controlled_cash_cycle_days"]])
+            except ValueError as exc:
+                raise ValueError("learned transfer hard constraints must be numeric") from exc
+            if not math.isfinite(investment) or not math.isfinite(cash_days):
+                raise ValueError("learned transfer hard constraints must be finite")
+            controls[candidate_id] = {
+                "investment_cny": investment,
+                "cash_cycle_days": cash_days,
+                "status": cells[positions["hard_constraint_status"]],
+            }
+        if not controls:
+            raise ValueError("learned transfer hard-constraint table is empty")
+        return controls
+    raise ValueError("learned transfer hard-constraint columns are missing")
+
+
+def controlled_single_case_errors(
+    case_id: str,
+    result: dict[str, Any],
+    controlled_baselines: dict[str, float],
+) -> list[str]:
+    """Enforce the L01/L02 contract even when either case is run alone."""
+
+    errors = controlled_effect_result_errors(
+        case_id, result, set(controlled_baselines)
+    )
+    recommended_ids = {
+        item.get("candidate_id")
+        for item in result.get("recommended", [])
+        if isinstance(item, dict) and isinstance(item.get("candidate_id"), str)
+    }
+    if recommended_ids != set(controlled_baselines):
+        errors.append(f"{case_id} candidate set must equal the controlled fixture")
+    effects = result.get("rule_effects")
+    effect_by_candidate: dict[str, dict[str, Any]] = {}
+    if isinstance(effects, list):
+        effect_by_candidate = {
+            effect.get("candidate_id"): effect
+            for effect in effects
+            if isinstance(effect, dict)
+            and effect.get("dimension") == "competition"
+            and isinstance(effect.get("candidate_id"), str)
+        }
+    for candidate_id, baseline in controlled_baselines.items():
+        score = _score_for(result, candidate_id, "competition")
+        effect = effect_by_candidate.get(candidate_id)
+        if case_id == "L01":
+            if not _same_finite_number(score, baseline):
+                errors.append(
+                    f"L01 {candidate_id}/competition must equal fixture baseline"
+                )
+            continue
+        if effect is None:
+            if not _same_finite_number(score, baseline):
+                errors.append(
+                    f"L02 negative-control {candidate_id}/competition must equal fixture baseline"
+                )
+            continue
+        delta = effect.get("delta")
+        expected_after = (
+            max(0.0, min(5.0, baseline + delta))
+            if isinstance(delta, int) and not isinstance(delta, bool)
+            else None
+        )
+        if not _same_finite_number(effect.get("before"), baseline):
+            errors.append(f"L02 {candidate_id} before must equal fixture baseline")
+        if not _same_finite_number(effect.get("after"), expected_after):
+            errors.append(f"L02 {candidate_id} after must equal baseline plus delta")
+        if not _same_finite_number(score, expected_after):
+            errors.append(f"L02 {candidate_id}/competition must equal controlled after")
+    return errors
 
 
 def learned_effect_pair_invariant_errors(
@@ -1426,6 +1639,12 @@ def learned_effect_pair_invariant_errors(
         errors.append("L01/L02 recommended candidate sets must match")
     if proposed_ids != set(controlled_baselines):
         errors.append("L01/L02 candidate sets must equal the controlled fixture candidates")
+    errors.extend(
+        controlled_effect_result_errors("L01", proposed, set(controlled_baselines))
+    )
+    errors.extend(
+        controlled_effect_result_errors("L02", active, set(controlled_baselines))
+    )
     affected_candidates_by_dimension: dict[str, set[str]] = {}
     for candidate_id, dimension in affected:
         affected_candidates_by_dimension.setdefault(dimension, set()).add(candidate_id)
@@ -1589,6 +1808,7 @@ def grade_case(
     recommended = collect_ids(result.get("recommended", []))
     filtered = collect_ids(result.get("filtered", []))
     pending = collect_ids(result.get("blocked_pending_data", []))
+    errors.extend(grade_candidate_partitions(result))
     for candidate_id in expected["recommended_include"]:
         if candidate_id not in recommended:
             errors.append(f"recommended missing {candidate_id}")
@@ -1608,10 +1828,31 @@ def grade_case(
             result.get("recommended", []),
         )
     )
+    if case.get("id") in {"L01", "L02"}:
+        try:
+            controlled_baselines = parse_controlled_competition_baselines(
+                (
+                    ROOT / "references/demo-data/eval-learned-transfer-candidates.md"
+                ).read_text(encoding="utf-8")
+            )
+        except (OSError, ValueError) as exc:
+            errors.append(
+                f"controlled learned fixture could not be loaded: {type(exc).__name__}"
+            )
+        else:
+            errors.extend(
+                controlled_single_case_errors(
+                    case["id"], result, controlled_baselines
+                )
+            )
 
     report_text = report.read_text(encoding="utf-8") if report and report.is_file() else ""
     errors.extend(grade_report_rule_effects(report_text, result.get("rule_effects")))
     combined = json.dumps(result, ensure_ascii=False) + "\n" + report_text
+    if case.get("id") in {"L01", "L02"} and not any(
+        term in combined for term in ("hypothesis-only", "合成假设", "受控 effect")
+    ):
+        errors.append("controlled learned report missing hypothesis-only disclosure")
     for term in expected["required_terms"]:
         if term not in combined:
             errors.append(f"required term missing: {term}")

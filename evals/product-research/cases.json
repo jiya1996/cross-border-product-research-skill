@@ -178,7 +178,7 @@
           {"seller_id": "eval-content", "fixture": "evals/product-research/fixtures/reports/eval-content"}
         ]
       },
-      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。使用 references/demo-data/eval-learned-transfer-candidates.md 做 TikTok US 选品；将 pre_rule_competition_score 作为受控的规则应用前基线，明确报告 status: proposed 的 learned 规则是否影响分数。",
+      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。使用 references/demo-data/eval-learned-transfer-candidates.md 做 TikTok US 选品；这是 effect-only 的合成假设实验，使用 controlled_initial_investment_cny、controlled_cash_cycle_days 与 hard_constraint_status 判断受控硬约束，生成四维 hypothesis-only 暂定推荐。完整单位成本缺失时 margin 与 total_score 保持 N/A，manual_verification 必须包含成本或毛利核实，不要把同一候选同时放入 blocked_pending_data。将 pre_rule_competition_score 作为受控的规则应用前基线，明确报告 status: proposed 的 learned 规则是否影响分数。",
       "expected": {
         "rule_effects": {"exact": []},
         "statuses": ["completed"],
@@ -205,7 +205,7 @@
           {"seller_id": "eval-content", "fixture": "evals/product-research/fixtures/reports/eval-content"}
         ]
       },
-      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。使用 references/demo-data/eval-learned-transfer-candidates.md 做 TikTok US 选品；将 pre_rule_competition_score 作为受控的规则应用前基线，learned 规则状态为 active，必须展示 rule_id、命中候选、影响维度与调整前后分值。",
+      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。使用 references/demo-data/eval-learned-transfer-candidates.md 做 TikTok US 选品；这是 effect-only 的合成假设实验，使用 controlled_initial_investment_cny、controlled_cash_cycle_days 与 hard_constraint_status 判断受控硬约束，生成四维 hypothesis-only 暂定推荐。完整单位成本缺失时 margin 与 total_score 保持 N/A，manual_verification 必须包含成本或毛利核实，不要把同一候选同时放入 blocked_pending_data。将 pre_rule_competition_score 作为受控的规则应用前基线，learned 规则状态为 active，必须展示 rule_id、命中候选、影响维度与调整前后分值。",
       "expected": {
         "rule_effects": {
           "exact": [
