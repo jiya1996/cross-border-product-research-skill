@@ -127,7 +127,7 @@
           {"seller_id": "eval-content", "fixture": "evals/product-research/fixtures/sellers/eval-content", "include": ["profile.yaml", "sop.md", "decisions"]}
         ]
       },
-      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。只评估 references/demo-data/eval-guardrail-candidates.md 中 candidate_id=missing-cost；平台 TikTok US。不得使用行业均值或默认中性分。",
+      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。只评估 references/demo-data/eval-guardrail-candidates.md 中 candidate_id=missing-cost；平台 TikTok US。不得使用行业均值或默认中性分。关键数据缺失时，报告可见正文必须单独一行逐字写 `- 需人工核实`（不得只改写成‘核实’），最终 JSON 的 manual_verification 每一项也必须以 `需人工核实：` 开头。",
       "expected": {
         "rule_effects": {"exact": []},
         "statuses": ["completed", "blocked_missing_data"],
