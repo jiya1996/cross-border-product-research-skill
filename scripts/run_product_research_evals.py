@@ -1481,6 +1481,15 @@ def _write_json(path: Path, value: Any) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def build_agent_prompt(case: dict) -> str:
+    return (
+        case["prompt"]
+        + "\n评测环境是隔离副本。严格遵守 AGENTS.md 与 product-research Skill。"
+        + "\n不要调用 git 或任何版本控制命令；需要核对输出时直接读取已写入的文件。"
+        + "\n最终响应只返回评测 schema 要求的 JSON；报告仍按项目契约写盘。"
+    )
+
+
 def _run_agent_case(case: dict, args: argparse.Namespace, run_root: Path) -> dict[str, Any]:
     started = time.monotonic()
     case_artifacts = run_root / case["id"]
@@ -1517,11 +1526,7 @@ def _run_agent_case(case: dict, args: argparse.Namespace, run_root: Path) -> dic
         if args.model:
             command.extend(["--model", args.model])
         command.append("-")
-        prompt = (
-            case["prompt"]
-            + "\n评测环境是隔离副本。严格遵守 AGENTS.md 与 product-research Skill。"
-            + "\n最终响应只返回评测 schema 要求的 JSON；报告仍按项目契约写盘。"
-        )
+        prompt = build_agent_prompt(case)
         env = minimal_subprocess_env()
         completed = None
         events_text = ""

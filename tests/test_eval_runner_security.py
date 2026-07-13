@@ -87,6 +87,8 @@ class EvalWorkspaceSecurityTests(unittest.TestCase):
     def test_visible_skill_contract_declares_exact_rule_effect_header(self) -> None:
         skill = (ROOT / "skills/product-research/SKILL.md").read_text(encoding="utf-8")
         self.assertIn(eval_runner.REPORT_EFFECT_HEADER, skill)
+        prompt = eval_runner.build_agent_prompt({"prompt": "PRODUCT_RESEARCH_EVAL=1"})
+        self.assertIn("不要调用 git 或任何版本控制命令", prompt)
 
     def test_output_schema_rejects_codex_incompatible_keywords(self) -> None:
         compatible = {
