@@ -1592,6 +1592,32 @@ def controlled_platform_result_errors(
         errors.append(f"{case_id} controlled platform filtered must be empty")
     if result.get("blocked_pending_data") != []:
         errors.append(f"{case_id} controlled platform blocked_pending_data must be empty")
+    access = result.get("data_access")
+    if not isinstance(access, dict):
+        errors.append(f"{case_id} controlled platform data_access must be an object")
+        return errors
+    if access.get("mode") != "synthetic_demo":
+        errors.append(f"{case_id} controlled platform mode must be synthetic_demo")
+    sources = access.get("sources_used")
+    fixture_path = "references/demo-data/eval-platform-comparison.md"
+    fixture_source = False
+    if isinstance(sources, list):
+        for source in sources:
+            if (
+                not isinstance(source, dict)
+                or source.get("provider") != "repository_fixture"
+                or source.get("provider_variant") != "eval_platform_comparison"
+                or source.get("source_role") != "direct_market_data"
+            ):
+                continue
+            operations = source.get("read_operations")
+            if operations == [f"read {fixture_path}"]:
+                fixture_source = True
+                break
+    if not fixture_source:
+        errors.append(f"{case_id} controlled platform fixture provenance missing")
+    if access.get("collectors_used") != []:
+        errors.append(f"{case_id} controlled platform collectors_used must be empty")
     return errors
 
 
@@ -1751,16 +1777,52 @@ def learned_effect_pair_invariant_errors(
 
 REPORT_EFFECT_COLUMNS = ("rule_id", "candidate_id", "dimension", "delta", "before", "after")
 REPORT_EFFECT_HEADER = "| rule_id | candidate_id | dimension | delta | before | after |"
+REPORT_CANDIDATE_COLUMNS = (
+    "candidate_id",
+    "rank",
+    "demand",
+    "competition",
+    "margin",
+    "capability_fit",
+    "risk",
+    "total_score",
+)
+REPORT_CANDIDATE_HEADER = (
+    "| candidate_id | rank | demand | competition | margin | capability_fit | risk | total_score |"
+)
 
 
 def _markdown_cells(line: str) -> list[str]:
     return [cell.strip().strip("`") for cell in line.strip().strip("|").split("|")]
 
 
+def visible_markdown_text(markdown: str) -> str:
+    """Remove content that Markdown renderers hide or render only as code."""
+
+    without_comments = re.sub(r"<!--(?:.*?-->|.*\Z)", "", markdown, flags=re.S)
+    visible: list[str] = []
+    fence_char: str | None = None
+    fence_length = 0
+    for line in without_comments.splitlines():
+        fence = re.match(r"^ {0,3}(`{3,}|~{3,})", line)
+        if fence_char is None:
+            if fence:
+                fence_char = fence.group(1)[0]
+                fence_length = len(fence.group(1))
+                continue
+            visible.append(line)
+            continue
+        if fence and fence.group(1)[0] == fence_char and len(fence.group(1)) >= fence_length:
+            fence_char = None
+            fence_length = 0
+    return "\n".join(visible)
+
+
 def grade_report_rule_effects(report_text: str, actual: Any) -> list[str]:
     errors: list[str] = []
     if not isinstance(actual, list):
         return errors
+    report_text = visible_markdown_text(report_text)
     report_rows: list[tuple[str, str, str, int, float, float]] = []
     lines = report_text.splitlines()
     index = 0
@@ -1828,6 +1890,130 @@ def grade_report_rule_effects(report_text: str, actual: Any) -> list[str]:
         errors.append(f"report missing exact rule-effect table header: {REPORT_EFFECT_HEADER}")
     if Counter(report_rows) != Counter(actual_rows):
         errors.append("report rule-effect rows must exactly match result.rule_effects")
+    return errors
+
+
+def _report_nullable_number(raw: str) -> tuple[bool, float | None]:
+    if raw.casefold() == "n/a":
+        return True, None
+    try:
+        value = float(raw)
+    except ValueError:
+        return False, None
+    return math.isfinite(value), value
+
+
+def grade_report_candidate_scores(report_text: str, recommended: Any) -> list[str]:
+    """Bind the controlled platform candidate table to result.recommended."""
+
+    errors: list[str] = []
+    report_rows: list[tuple[Any, ...]] = []
+    lines = report_text.splitlines()
+    found_header = False
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        if not line.lstrip().startswith("|"):
+            index += 1
+            continue
+        header = tuple(cell.casefold() for cell in _markdown_cells(line))
+        if header != REPORT_CANDIDATE_COLUMNS:
+            index += 1
+            continue
+        found_header = True
+        index += 1
+        if index < len(lines) and lines[index].lstrip().startswith("|"):
+            separators = _markdown_cells(lines[index])
+            if len(separators) == len(REPORT_CANDIDATE_COLUMNS) and all(
+                re.fullmatch(r":?-{3,}:?", cell) for cell in separators
+            ):
+                index += 1
+        while index < len(lines) and lines[index].lstrip().startswith("|"):
+            cells = _markdown_cells(lines[index])
+            index += 1
+            if len(cells) != len(REPORT_CANDIDATE_COLUMNS):
+                errors.append("report candidate row must contain eight columns")
+                continue
+            candidate_id, raw_rank, *raw_numbers = cells
+            if not re.fullmatch(r"[1-9]\d*", raw_rank):
+                errors.append("report candidate rank must be a positive integer")
+                continue
+            numbers: list[float | None] = []
+            valid = True
+            for raw in raw_numbers:
+                number_valid, value = _report_nullable_number(raw)
+                if not number_valid:
+                    errors.append("report candidate scores must be finite numbers or N/A")
+                    valid = False
+                    break
+                numbers.append(value)
+            if valid:
+                report_rows.append((candidate_id, int(raw_rank), *numbers))
+
+    expected_rows: list[tuple[Any, ...]] = []
+    if isinstance(recommended, list):
+        for candidate in recommended:
+            if not isinstance(candidate, dict):
+                continue
+            scores = candidate.get("scores")
+            if not isinstance(scores, dict):
+                continue
+            expected_rows.append(
+                (
+                    candidate.get("candidate_id"),
+                    candidate.get("rank"),
+                    scores.get("demand"),
+                    scores.get("competition"),
+                    scores.get("margin"),
+                    scores.get("capability_fit"),
+                    scores.get("risk"),
+                    candidate.get("total_score"),
+                )
+            )
+    if not found_header:
+        errors.append(f"report missing exact candidate table header: {REPORT_CANDIDATE_HEADER}")
+    if Counter(report_rows) != Counter(expected_rows):
+        errors.append("report candidate rows must exactly match result.recommended")
+    return errors
+
+
+def controlled_platform_report_errors(report_text: str, recommended: Any) -> list[str]:
+    """Keep controlled provenance and unknown commercial fields visible in the report."""
+
+    report_text = visible_markdown_text(report_text)
+    errors = grade_report_candidate_scores(report_text, recommended)
+    for required in (
+        "synthetic_demo",
+        "references/demo-data/eval-platform-comparison.md",
+        "真实市场数据链路未验证",
+    ):
+        if required not in report_text:
+            errors.append(f"controlled platform report missing disclosure: {required}")
+    claim = re.compile(
+        r"(?:"
+        r"(?:实际(?:测算)?|真实|最终|完整)(?:测算)?(?:毛利|利润)(?:率)?|"
+        r"(?:完整|最终|商业)(?:测算)?总分|"
+        r"(?<![\w])total_score(?![\w])|"
+        r"(?<![\w])(?:actual|real|final)\s+(?:margin|profit)(?![\w])"
+        r")"
+        r"\s*(?:为|是|约(?:为)?|大约(?:为)?|估计(?:为)?|≈|=|:|：)?\s*[+-]?\d",
+        re.I,
+    )
+    negation = re.compile(
+        r"(?:没有|无)证据(?:支持|表明|证明)?|"
+        r"(?:不得|不能|不可|不应|禁止)(?:声称|认定|写成|输出)?|"
+        r"不代表|并非|不是|未(?:验证|核实|确认)",
+        re.I,
+    )
+    affirmative_claim = False
+    for match in claim.finditer(report_text):
+        prefix = report_text[max(0, match.start() - 64) : match.start()]
+        clause = re.split(r"[。！？；;，,\n]", prefix)[-1]
+        if not negation.search(clause):
+            affirmative_claim = True
+            break
+    if affirmative_claim:
+        errors.append("controlled platform report asserts numeric margin or total score")
     return errors
 
 
@@ -1943,9 +2129,17 @@ def grade_case(
 
     report_text = report.read_text(encoding="utf-8") if report and report.is_file() else ""
     errors.extend(grade_report_rule_effects(report_text, result.get("rule_effects")))
+    if case.get("id") in {"P01A", "P01B"}:
+        errors.extend(
+            controlled_platform_report_errors(
+                report_text, result.get("recommended")
+            )
+        )
     combined = json.dumps(result, ensure_ascii=False) + "\n" + report_text
+    visible_report_text = visible_markdown_text(report_text)
     if case.get("id") in {"L01", "L02", "P01A", "P01B"} and not any(
-        term in combined for term in ("hypothesis-only", "合成假设", "受控 effect")
+        term in visible_report_text
+        for term in ("hypothesis-only", "合成假设", "受控 effect")
     ):
         errors.append("controlled experiment report missing hypothesis-only disclosure")
     for term in expected["required_terms"]:

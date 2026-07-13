@@ -563,6 +563,20 @@ class EvalRuleEffectTests(unittest.TestCase):
             "filtered": [],
             "blocked_pending_data": [],
             "manual_verification": ["完整成本与毛利需人工核实"],
+            "data_access": {
+                "mode": "synthetic_demo",
+                "sources_used": [
+                    {
+                        "provider": "repository_fixture",
+                        "provider_variant": "eval_platform_comparison",
+                        "source_role": "direct_market_data",
+                        "read_operations": [
+                            "read references/demo-data/eval-platform-comparison.md"
+                        ],
+                    }
+                ],
+                "collectors_used": [],
+            },
         }
         candidate_ids = {"platform-search", "platform-visual"}
         self.assertEqual(
@@ -592,6 +606,129 @@ class EvalRuleEffectTests(unittest.TestCase):
             "P01A", pending, candidate_ids, "platform-search"
         )
         self.assertTrue(any("blocked_pending_data" in error for error in errors))
+        fake_live = json.loads(json.dumps(result))
+        fake_live["data_access"]["mode"] = "live_mcp"
+        fake_live["data_access"]["sources_used"] = []
+        errors = eval_runner.controlled_platform_result_errors(
+            "P01A", fake_live, candidate_ids, "platform-search"
+        )
+        self.assertTrue(any("synthetic_demo" in error for error in errors))
+        self.assertTrue(any("provenance" in error for error in errors))
+        denied_read = json.loads(json.dumps(result))
+        denied_read["data_access"]["sources_used"][0]["provider"] = "live_market"
+        denied_read["data_access"]["sources_used"][0]["read_operations"] = [
+            "did NOT read references/demo-data/eval-platform-comparison.md"
+        ]
+        errors = eval_runner.controlled_platform_result_errors(
+            "P01A", denied_read, candidate_ids, "platform-search"
+        )
+        self.assertTrue(any("provenance" in error for error in errors))
+
+        report = (
+            "# 合成假设 hypothesis-only\n\n"
+            "data mode: synthetic_demo\n\n"
+            "source: references/demo-data/eval-platform-comparison.md\n\n"
+            "真实市场数据链路未验证。\n\n"
+            "| candidate_id | rank | demand | competition | margin | capability_fit | risk | total_score |\n"
+            "|---|---:|---:|---:|---:|---:|---:|---:|\n"
+            "| platform-search | 1 | 4 | 3 | N/A | 4 | 4 | N/A |\n"
+            "| platform-visual | 2 | 4 | 3 | N/A | 4 | 4 | N/A |\n"
+        )
+        self.assertEqual(
+            [],
+            eval_runner.controlled_platform_report_errors(
+                report, result["recommended"]
+            ),
+        )
+        malicious_report = report + "\n实际毛利为 20%，total_score=5。\n"
+        errors = eval_runner.controlled_platform_report_errors(
+            malicious_report, result["recommended"]
+        )
+        self.assertTrue(any("numeric margin" in error for error in errors))
+        for claim in (
+            "实际毛利率是20%",
+            "实际毛利率约20%",
+            "实际测算毛利率为20%",
+            "total_score：5",
+            "最终总分约5",
+        ):
+            errors = eval_runner.controlled_platform_report_errors(
+                report + "\n" + claim, result["recommended"]
+            )
+            self.assertTrue(any("numeric margin" in error for error in errors), claim)
+        negated_report = report + "\n没有证据支持实际毛利率为20%。\n"
+        self.assertFalse(
+            any(
+                "numeric margin" in error
+                for error in eval_runner.controlled_platform_report_errors(
+                    negated_report, result["recommended"]
+                )
+            )
+        )
+        hidden_report = (
+            "<!--\n"
+            + report
+            + "\n-->\n\n# 对外结论\n\nlive_mcp，真实链路已验证，实际毛利率是20%。\n"
+        )
+        errors = eval_runner.controlled_platform_report_errors(
+            hidden_report, result["recommended"]
+        )
+        self.assertTrue(any("candidate table" in error for error in errors))
+        self.assertTrue(any("disclosure" in error for error in errors))
+        self.assertTrue(any("numeric margin" in error for error in errors))
+        fenced_report = "```markdown\n" + report + "\n```\n"
+        errors = eval_runner.controlled_platform_report_errors(
+            fenced_report, result["recommended"]
+        )
+        self.assertTrue(any("candidate table" in error for error in errors))
+        divergent_report = report.replace(
+            "| platform-search | 1 | 4 | 3 | N/A | 4 | 4 | N/A |",
+            "| platform-search | 1 | 4 | 3 | 2 | 4 | 4 | 4 |",
+        )
+        errors = eval_runner.controlled_platform_report_errors(
+            divergent_report, result["recommended"]
+        )
+        self.assertTrue(any("exactly match" in error for error in errors))
+
+        case = {
+            "id": "P01A",
+            "prompt": "PRODUCT_RESEARCH_EVAL=1 seller_id=eval-content",
+            "expected": {
+                "statuses": ["completed"],
+                "platform_adapter": "amazon",
+                "report_required": True,
+                "recommended_include": ["platform-search"],
+                "recommended_exclude": [],
+                "filtered_include": [],
+                "pending_include": [],
+                "required_terms": [],
+                "forbidden_terms": [],
+                "rule_effects": {"exact": []},
+            },
+        }
+        bound_result = {
+            **result,
+            "status": "completed",
+            "seller_id": "eval-content",
+            "platform_adapter": "amazon",
+            "report_path": "reports/eval-content/platform.md",
+            "rule_effects": [],
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            workdir = Path(temp)
+            report_path = workdir / "reports/eval-content/platform.md"
+            report_path.parent.mkdir(parents=True)
+            report_path.write_text(report, encoding="utf-8")
+            passed, errors, _ = eval_runner.grade_case(
+                case, bound_result, workdir, [], []
+            )
+            self.assertTrue(passed, errors)
+            report_path.write_text(malicious_report, encoding="utf-8")
+            passed, errors, _ = eval_runner.grade_case(
+                case, bound_result, workdir, [], []
+            )
+            self.assertFalse(passed)
+            self.assertTrue(any("numeric margin" in error for error in errors))
 
         fixture = (
             ROOT / "references/demo-data/eval-platform-comparison.md"

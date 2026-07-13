@@ -259,7 +259,7 @@
           {"seller_id": "eval-content", "fixture": "evals/product-research/fixtures/sellers/eval-content", "include": ["profile.yaml", "sop.md", "decisions"]}
         ]
       },
-      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。使用 references/demo-data/eval-platform-comparison.md，为 Amazon US 执行受控的平台路由合成假设实验并写报告。使用 controlled_initial_investment_cny、controlled_cash_cycle_days 与 hard_constraint_status 判断受控硬约束，两个候选都必须进入 recommended 并生成四维 hypothesis-only 暂定分，第 1 名必须由 Amazon 搜索、评论与 CPC 信号决定。完整单位成本缺失时 margin 与 total_score 保持 N/A，manual_verification 必须包含成本或毛利核实，不要仅因真实市场或完整成本待核实就把受控候选放入 blocked_pending_data。",
+      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。使用 references/demo-data/eval-platform-comparison.md，为 Amazon US 执行受控的平台路由合成假设实验并写报告。使用 controlled_initial_investment_cny、controlled_cash_cycle_days 与 hard_constraint_status 判断受控硬约束，两个候选都必须进入 recommended 并生成四维 hypothesis-only 暂定分，第 1 名必须由 Amazon 搜索、评论与 CPC 信号决定。完整单位成本缺失时 margin 与 total_score 保持 N/A，manual_verification 必须包含成本或毛利核实，不要仅因真实市场或完整成本待核实就把受控候选放入 blocked_pending_data。data_access 必须使用 mode=synthetic_demo，并精确记录 provider=repository_fixture、provider_variant=eval_platform_comparison、source_role=direct_market_data、read_operations=[\"read references/demo-data/eval-platform-comparison.md\"]，collectors_used 保持空数组。报告可见正文必须明确写出 synthetic_demo、references/demo-data/eval-platform-comparison.md 与“真实市场数据链路未验证”，并用精确表头 `| candidate_id | rank | demand | competition | margin | capability_fit | risk | total_score |` 将两个候选与最终 JSON 逐值对齐，空值写 N/A。",
       "expected": {
         "rule_effects": {"exact": []},
         "statuses": ["completed"],
@@ -283,7 +283,7 @@
           {"seller_id": "eval-content", "fixture": "evals/product-research/fixtures/sellers/eval-content", "include": ["profile.yaml", "sop.md", "decisions"]}
         ]
       },
-      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。使用 references/demo-data/eval-platform-comparison.md，为 TikTok US 执行受控的平台路由合成假设实验并写报告。使用 controlled_initial_investment_cny、controlled_cash_cycle_days 与 hard_constraint_status 判断受控硬约束，两个候选都必须进入 recommended 并生成四维 hypothesis-only 暂定分，第 1 名必须由 TikTok 视觉、互动、同款密度与物流信号决定。完整单位成本缺失时 margin 与 total_score 保持 N/A，manual_verification 必须包含成本或毛利核实，不要仅因真实市场或完整成本待核实就把受控候选放入 blocked_pending_data。",
+      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。使用 references/demo-data/eval-platform-comparison.md，为 TikTok US 执行受控的平台路由合成假设实验并写报告。使用 controlled_initial_investment_cny、controlled_cash_cycle_days 与 hard_constraint_status 判断受控硬约束，两个候选都必须进入 recommended 并生成四维 hypothesis-only 暂定分，第 1 名必须由 TikTok 视觉、互动、同款密度与物流信号决定。完整单位成本缺失时 margin 与 total_score 保持 N/A，manual_verification 必须包含成本或毛利核实，不要仅因真实市场或完整成本待核实就把受控候选放入 blocked_pending_data。data_access 必须使用 mode=synthetic_demo，并精确记录 provider=repository_fixture、provider_variant=eval_platform_comparison、source_role=direct_market_data、read_operations=[\"read references/demo-data/eval-platform-comparison.md\"]，collectors_used 保持空数组。报告可见正文必须明确写出 synthetic_demo、references/demo-data/eval-platform-comparison.md 与“真实市场数据链路未验证”，并用精确表头 `| candidate_id | rank | demand | competition | margin | capability_fit | risk | total_score |` 将两个候选与最终 JSON 逐值对齐，空值写 N/A。",
       "expected": {
         "rule_effects": {"exact": []},
         "statuses": ["completed"],
