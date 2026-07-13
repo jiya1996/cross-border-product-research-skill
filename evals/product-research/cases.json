@@ -502,7 +502,7 @@
           {"seller_id": "eval-content", "fixture": "evals/product-research/fixtures/sellers/eval-content", "include": ["profile.yaml", "sop.md", "decisions"]}
         ]
       },
-      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。只分析 references/demo-data/eval-tool-role-boundaries.json 中 candidate_id=linkfox-assisted，为 Amazon US 生成报告。候选的需求、竞争、成本和供给来自其他合成来源；LinkFox 只可用于图片与内容生产能力观察，不能作为销量、搜索需求、利润或转化证据。最终 JSON 必须填写 data_access，并把 linkfox_creative 放在 transformations_used 而不是市场事实 provider。",
+      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。只分析 references/demo-data/eval-tool-role-boundaries.json 中 candidate_id=linkfox-assisted，为 Amazon US 生成报告。候选的需求、竞争、成本和供给来自其他合成来源；LinkFox 只可用于图片与内容生产能力观察，不能作为销量、搜索需求、利润或转化证据。最终 JSON 必须填写 data_access：sources_used[].provider 中不得出现 linkfox，也不得为它新增 transformation_only 来源行；只在 transformations_used 中记录 linkfox_creative。",
       "expected": {
         "rule_effects": {"exact": []},
         "statuses": ["completed"],
@@ -648,7 +648,7 @@
           {"seller_id": "eval-content", "fixture": "evals/product-research/fixtures/sellers/eval-content", "include": ["profile.yaml", "sop.md", "decisions"]}
         ]
       },
-      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。只分析 references/demo-data/eval-tool-role-boundaries.json 中 candidate_id=hubu-transported-ads。该合成文件由白名单虎步 RPA 搬运，但原始 provider 是 amazon_ads，来源角色仍是 seller_first_party_data。不得把 hubu_rpa 写成事实 provider，不得外推成市场需求；缺少市场、供应链和成本时不得推荐。最终 JSON 必须把 amazon_ads 放入 sources_used、hubu_rpa 放入 collectors_used，并填写 data_access。",
+      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。只分析 references/demo-data/eval-tool-role-boundaries.json 中 candidate_id=hubu-transported-ads。该合成文件由白名单虎步 RPA 搬运，但原始 provider 是 amazon_ads，来源角色仍是 seller_first_party_data。不得外推成市场需求；缺少市场、供应链和成本时不得推荐。最终 JSON 必须把 amazon_ads 放入 sources_used、hubu_rpa 放入 collectors_used；sources_used[].provider 中不得出现 hubu_rpa，也不得为搬运器新增来源行。",
       "expected": {
         "rule_effects": {"exact": []},
         "statuses": ["completed", "blocked_missing_data"],
