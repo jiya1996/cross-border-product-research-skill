@@ -188,7 +188,7 @@
         "recommended_exclude": [],
         "filtered_include": [],
         "pending_include": [],
-        "required_terms": ["status: proposed", "未参与"],
+        "required_terms": ["proposed", "未参与"],
         "forbidden_terms": []
       }
     },
