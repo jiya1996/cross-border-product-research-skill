@@ -2013,8 +2013,11 @@ def controlled_platform_report_errors(report_text: str, recommended: Any) -> lis
     numeric_commercial_claim = False
     for line in report_text.splitlines():
         for clause in re.split(r"[。！？；;，,]", line):
-            if metric.search(clause) and numeric.search(clause):
-                numeric_commercial_claim = True
+            for match in metric.finditer(clause):
+                if numeric.search(clause[match.end() :]):
+                    numeric_commercial_claim = True
+                    break
+            if numeric_commercial_claim:
                 break
         if numeric_commercial_claim:
             break

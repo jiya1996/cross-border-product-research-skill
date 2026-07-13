@@ -654,6 +654,13 @@ class EvalRuleEffectTests(unittest.TestCase):
                 report, result["recommended"]
             ),
         )
+        n_a_with_candidate_count = report + "\n两个候选的 total_score 均为 N/A。\n"
+        self.assertEqual(
+            [],
+            eval_runner.controlled_platform_report_errors(
+                n_a_with_candidate_count, result["recommended"]
+            ),
+        )
         malicious_report = report + "\n实际毛利为 20%，total_score=5。\n"
         errors = eval_runner.controlled_platform_report_errors(
             malicious_report, result["recommended"]
