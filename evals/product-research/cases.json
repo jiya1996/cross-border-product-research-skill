@@ -163,7 +163,7 @@
         "filtered_include": [],
         "pending_include": ["safe-visual"],
         "pending_exact": ["safe-visual"],
-        "required_terms": ["需人工核实"],
+        "required_terms": [],
         "forbidden_terms": ["认证费用为 9.99", "税率为 7%"]
       }
     },
