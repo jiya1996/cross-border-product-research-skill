@@ -89,6 +89,8 @@ class EvalWorkspaceSecurityTests(unittest.TestCase):
         self.assertIn(eval_runner.REPORT_EFFECT_HEADER, skill)
         prompt = eval_runner.build_agent_prompt({"prompt": "PRODUCT_RESEARCH_EVAL=1"})
         self.assertIn("不要调用 git 或任何版本控制命令", prompt)
+        self.assertIn("写报告使用 apply_patch", prompt)
+        self.assertIn("不要使用 shell 反引号", prompt)
 
     def test_output_schema_rejects_codex_incompatible_keywords(self) -> None:
         compatible = {

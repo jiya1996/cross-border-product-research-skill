@@ -50,7 +50,7 @@ AGENT_INPUT_DENY_EXACT = frozenset(
     }
 )
 AGENT_INPUT_DENY_PREFIXES = ("references/upstream/",)
-COMMAND_PROFILE = "codex_exec_ephemeral_workspace_write_v2"
+COMMAND_PROFILE = "codex_exec_ephemeral_workspace_write_v3"
 SAFE_ENV_NAMES = frozenset(
     {
         "HOME",
@@ -1486,6 +1486,7 @@ def build_agent_prompt(case: dict) -> str:
         case["prompt"]
         + "\n评测环境是隔离副本。严格遵守 AGENTS.md 与 product-research Skill。"
         + "\n不要调用 git 或任何版本控制命令；需要核对输出时直接读取已写入的文件。"
+        + "\n不要使用 shell 反引号、命令替换、进程替换、eval、变量生成命令或 heredoc；写报告使用 apply_patch。"
         + "\n最终响应只返回评测 schema 要求的 JSON；报告仍按项目契约写盘。"
     )
 

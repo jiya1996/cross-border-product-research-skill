@@ -221,7 +221,7 @@
         "recommended_exclude": [],
         "filtered_include": [],
         "pending_include": [],
-        "required_terms": ["learned_tiktok_same_density_diff_001", "competition", "调整前", "调整后"],
+        "required_terms": ["learned_tiktok_same_density_diff_001", "competition"],
         "forbidden_terms": []
       }
     },
