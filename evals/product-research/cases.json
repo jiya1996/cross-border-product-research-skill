@@ -389,7 +389,7 @@
           {"seller_id": "eval-content", "fixture": "evals/product-research/fixtures/sellers/eval-content", "include": ["profile.yaml", "sop.md", "decisions"]}
         ]
       },
-      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。只使用 references/demo-data/eval-community-supply.md 的 Reddit 段验证需求，不引入其他数据。最终 JSON 必须设置 conclusion_type=demand_hypothesis_only，报告可见正文单独一行写 `- conclusion_type: demand_hypothesis_only`。状态桶必须互斥：recommended 精确为空数组，filtered 精确为空数组，blocked_pending_data 只包含 reddit-travel-pill-label-001；即使需求假设获得方向性支持，也不得把该候选同时写入 recommended，可在报告中只作为“待验证需求假设”讨论。",
+      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。只使用 references/demo-data/eval-community-supply.md 的 Reddit 段验证需求，不引入其他数据。最终 JSON 必须设置 conclusion_type=demand_hypothesis_only，报告可见正文单独一行写 `- conclusion_type: demand_hypothesis_only`，并单独一行逐字写 `- 尚待验证：目标平台、供应链、利润`。状态桶必须互斥：recommended 精确为空数组，filtered 精确为空数组，blocked_pending_data 只包含 reddit-travel-pill-label-001；即使需求假设获得方向性支持，也不得把该候选同时写入 recommended，可在报告中只作为“待验证需求假设”讨论。",
       "expected": {
         "rule_effects": {"exact": []},
         "conclusion_type": "demand_hypothesis_only",
