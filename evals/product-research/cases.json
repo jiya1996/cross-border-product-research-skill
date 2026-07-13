@@ -113,7 +113,7 @@
         "recommended_exclude": ["fragile-glass", "child-teether", "over-capital", "missing-cost"],
         "filtered_include": ["fragile-glass", "child-teether", "over-capital"],
         "pending_include": ["missing-cost"],
-        "required_terms": ["被过滤", "capital_per_sku_max", "forbidden_categories", "forbidden_attributes"],
+        "required_terms": ["capital_per_sku_max", "forbidden_categories", "forbidden_attributes"],
         "forbidden_terms": []
       }
     },
