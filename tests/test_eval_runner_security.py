@@ -915,6 +915,40 @@ class EvalGradeBindingTests(unittest.TestCase):
             self.assertFalse(passed)
             self.assertTrue(any("must exactly match" in error for error in errors))
 
+    def test_conclusion_type_is_bound_to_json_and_visible_report(self) -> None:
+        case = self.case()
+        case["expected"]["conclusion_type"] = "demand_hypothesis_only"
+        result = self.result()
+        result["conclusion_type"] = "demand_hypothesis_only"
+        with tempfile.TemporaryDirectory() as temp:
+            workdir = Path(temp)
+            report = workdir / "reports/eval-content/result.md"
+            report.parent.mkdir(parents=True)
+            effect_table = (
+                "| rule_id | candidate_id | dimension | delta | before | after |\n"
+                "|---|---|---|---:|---:|---:|\n"
+                "| rule-one | candidate-one | competition | -1 | 2 | 1 |\n"
+            )
+            report.write_text(
+                "- conclusion_type: demand_hypothesis_only\n\n" + effect_table,
+                encoding="utf-8",
+            )
+            passed, errors, _ = eval_runner.grade_case(
+                case, result, workdir, [], []
+            )
+            self.assertTrue(passed, errors)
+
+            report.write_text(
+                "<!-- - conclusion_type: demand_hypothesis_only -->\n\n"
+                + effect_table,
+                encoding="utf-8",
+            )
+            passed, errors, _ = eval_runner.grade_case(
+                case, result, workdir, [], []
+            )
+            self.assertFalse(passed)
+            self.assertTrue(any("conclusion line" in error for error in errors))
+
 
 class EvalInfrastructureTests(unittest.TestCase):
     @staticmethod

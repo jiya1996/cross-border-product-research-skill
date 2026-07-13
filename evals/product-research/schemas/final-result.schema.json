@@ -21,6 +21,14 @@
     "status": {
       "enum": ["completed", "needs_input", "redirected_intake", "blocked_missing_data"]
     },
+    "conclusion_type": {
+      "enum": [
+        "demand_hypothesis_only",
+        "supply_validation_only",
+        "commercial_recommendation",
+        "not_applicable"
+      ]
+    },
     "seller_id": {"type": ["string", "null"]},
     "platform_adapter": {
       "enum": ["amazon", "shein", "tiktok", "dtc-seo", "reddit", "1688", "unknown"]

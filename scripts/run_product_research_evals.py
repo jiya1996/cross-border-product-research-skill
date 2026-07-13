@@ -353,6 +353,13 @@ def static_validate(cases: list[dict]) -> None:
             raise SystemExit(f"Case {case['id']} invalid prompt inputs: " + "; ".join(prompt_errors))
         target_seller = prompt_seller_id(case.get("prompt", ""))
         expected = case.get("expected", {})
+        if "conclusion_type" in expected and expected["conclusion_type"] not in {
+            "demand_hypothesis_only",
+            "supply_validation_only",
+            "commercial_recommendation",
+            "not_applicable",
+        }:
+            raise SystemExit(f"Case {case['id']} has invalid expected.conclusion_type")
         for key in [
             "statuses", "platform_adapter", "report_required", "recommended_include",
             "recommended_exclude", "filtered_include", "pending_include",
@@ -2052,6 +2059,11 @@ def grade_case(
         errors.append(
             f"platform_adapter={result.get('platform_adapter')} expected {expected['platform_adapter']}"
         )
+    expected_conclusion = expected.get("conclusion_type")
+    if expected_conclusion is not None and result.get("conclusion_type") != expected_conclusion:
+        errors.append(
+            f"conclusion_type={result.get('conclusion_type')!r} expected {expected_conclusion!r}"
+        )
 
     report = None
     report_path = result.get("report_path")
@@ -2152,6 +2164,10 @@ def grade_case(
         )
     combined = json.dumps(result, ensure_ascii=False) + "\n" + report_text
     visible_report_text = visible_markdown_text(report_text)
+    if expected_conclusion is not None:
+        conclusion_line = f"- conclusion_type: {expected_conclusion}"
+        if conclusion_line not in visible_report_text.splitlines():
+            errors.append(f"report missing exact conclusion line: {conclusion_line}")
     if case.get("id") in {"L01", "L02", "P01A", "P01B"} and not any(
         term in visible_report_text
         for term in ("hypothesis-only", "合成假设", "受控 effect")
