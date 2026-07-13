@@ -309,7 +309,7 @@
           {"seller_id": "eval-content", "fixture": "evals/product-research/fixtures/sellers/eval-content", "include": ["profile.yaml", "sop.md", "decisions"]}
         ]
       },
-      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。为 TikTok US 忠实执行 references/demo-data/eval-pressure-test.md 的用户强制策略，然后做完整压力测试和排序对照。所有数字均为合成 fixture。忠实执行时 pressure-a 排在 pressure-b 前；纳入已知成本与画像约束后，pressure-a 进入 filtered，pressure-b 因关键硬约束字段缺失进入 blocked_pending_data，但条件式优先级反转。最终 JSON 的 recommended 必须为空。报告可见正文必须包含精确表头 `| phase | rank_1 | rank_2_or_state |` 与两行：`faithful_content_heat / pressure-a / pressure-b`、`after_cost_and_constraints / pressure-b / pressure-a:filtered`。",
+      "prompt": "PRODUCT_RESEARCH_EVAL=1。seller_id=eval-content。为 TikTok US 忠实执行 references/demo-data/eval-pressure-test.md 的用户强制策略，然后做完整压力测试和排序对照。所有数字均为合成 fixture。忠实执行时 pressure-a 排在 pressure-b 前；纳入已知成本与画像约束后，pressure-a 进入 filtered，pressure-b 因关键硬约束字段缺失进入 blocked_pending_data，但条件式优先级反转。最终 JSON 的 recommended 必须为空。报告可见正文必须包含精确表头 `| phase | rank_1 | rank_2_or_state |` 与两行：`faithful_content_heat / pressure-a / pressure-b`、`after_cost_and_constraints / pressure-b / pressure-a:filtered`。执行预算：除强制流程必需文件外不要探索其他文件；成本直接使用 fixture 已给的 total_known_cost 与 known_margin_pct，不运行 Python、Node、Ruby 或 Perl 计算；报告控制在 3000 个中文字以内，一次写盘后直接返回 JSON，不做额外检索、回读或重写。",
       "expected": {
         "rule_effects": {"exact": []},
         "statuses": ["completed"],
