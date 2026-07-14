@@ -1,0 +1,32 @@
+{
+  "blocked_pending_data": [],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "none",
+    "sources_used": [],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [],
+    "platform_strategy": null,
+    "policy": null,
+    "profile": null,
+    "sop": null
+  },
+  "manual_verification": [
+    "请提供明确的 seller_id；不得把 _example 默认视为真实卖家。"
+  ],
+  "notes": [
+    "product-research Skill 要求任何选品分析前先确认 seller_id。",
+    "因 seller_id 缺失，未读取候选数据、卖家画像、SOP、决策记录、知识政策或 TikTok 策略，未执行过滤与打分，也未创建推荐报告。"
+  ],
+  "platform_adapter": "tiktok",
+  "recommended": [],
+  "report_path": null,
+  "rule_effects": [],
+  "seller_id": null,
+  "status": "needs_input"
+}

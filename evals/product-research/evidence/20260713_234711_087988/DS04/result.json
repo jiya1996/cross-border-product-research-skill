@@ -1,0 +1,63 @@
+{
+  "blocked_pending_data": [
+    {
+      "candidate_id": "community-hype",
+      "missing_fields": [
+        "verified_sales",
+        "verified_cpc",
+        "verified_certification_cost",
+        "verified_margin",
+        "market",
+        "collected_at"
+      ]
+    }
+  ],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "zhiwubuyan",
+        "provider_variant": null,
+        "read_operations": [
+          "read references/demo-data/eval-tool-role-boundaries.json candidate_id=community-hype and source_id=zhiwubuyan-post"
+        ],
+        "source_role": "experience_reference"
+      }
+    ],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/amazon.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "核验帖子作者身份与原始报表。",
+    "补齐 Amazon US 站点范围、采集日期、数据窗口和指标口径。",
+    "用合格的只读市场来源核验销量与 CPC。",
+    "从 references 中有来源的事实清单或可复算公式核验认证费与利润成本项。"
+  ],
+  "notes": [
+    "该帖子按 knowledge-policy 分类为经验型知识，source_role=experience_reference，allowed_dimensions 为空。",
+    "帖子声称的日销、CPC、认证费和利润不进入 facts/evidence，不触发硬过滤，也不参与任何维度打分。",
+    "候选因关键事实不足进入 blocked_pending_data，不进入推荐或精确排序。",
+    "唯一 learned 规则状态为 proposed，未参与本次打分。",
+    "真实市场数据链路未验证；本次仅使用仓库合成评测数据。"
+  ],
+  "platform_adapter": "amazon",
+  "recommended": [],
+  "report_path": "reports/eval-content/2026-07-13_community-hype证据边界.md",
+  "rule_effects": [],
+  "seller_id": "eval-content",
+  "status": "completed"
+}

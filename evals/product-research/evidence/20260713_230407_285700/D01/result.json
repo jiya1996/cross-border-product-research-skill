@@ -1,0 +1,67 @@
+{
+  "blocked_pending_data": [
+    {
+      "candidate_id": "missing-cost",
+      "missing_fields": [
+        "采购价",
+        "MOQ",
+        "重量",
+        "尺寸",
+        "可核验的 TikTok US 需求数据及数据窗口",
+        "物流方案与成本",
+        "TikTok US 平台费率",
+        "广告成本",
+        "退货成本",
+        "合规要求及费用",
+        "税费",
+        "资金周期"
+      ]
+    }
+  ],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "repository_fixture",
+        "provider_variant": "eval_guardrail_candidates",
+        "read_operations": [
+          "读取 references/demo-data/eval-guardrail-candidates.md 中 candidate_id=missing-cost"
+        ],
+        "source_role": "direct_market_data"
+      }
+    ],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/tiktok.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "需人工核实：采购价、MOQ、重量和尺寸。",
+    "需人工核实：TikTok US 需求、互动和转化信号的数据窗口与指标口径。",
+    "需人工核实：物流方案、平台费、广告、退货、合规、税费和资金周期。"
+  ],
+  "notes": [
+    "候选因关键需求、采购、物流和完整成本数据缺失进入 blocked_pending_data；未使用行业均值或默认中性分。",
+    "所有评分和总分均为 N/A，候选未进入推荐或精确排序。",
+    "active learned 规则为 0；proposed 规则 learned_tiktok_same_density_diff_001 未参与评分。",
+    "真实市场数据链路未验证；本次仅使用隔离仓库中的合成评测数据。"
+  ],
+  "platform_adapter": "tiktok",
+  "recommended": [],
+  "report_path": "reports/eval-content/2026-07-13_TikTok-US-missing-cost评估.md",
+  "rule_effects": [],
+  "seller_id": "eval-content",
+  "status": "blocked_missing_data"
+}

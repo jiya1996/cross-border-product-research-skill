@@ -18,9 +18,13 @@
 
 - 仓库结构校验通过；
 - 26-case 静态契约通过，100 分 rubric 完整；
-- 132/132 行为单测通过；
-- E00、T01、X01、DS01–DS07、W02 等代表性 Agent 黑盒 case 在 learned v2 前的基线通过；v2 的 26-case 全量重跑与脱敏 evidence 属于后续独立评测 PR，当前不得把旧结果当成 v2 回归；
-- 内核 PR #2 保留了基线评测契约；当前堆叠评测分支已完成 L01/L02 schema 迁移、oracle 隔离、runner 安全门和脱敏 evidence 导出器。26-case Agent 结果只有在干净 code commit 上重跑后才会列为当前证据；
+- 137/137 行为单测通过；
+- learned v2 被测代码提交为 `92e0a6040967e1c7ac9d7bc1a60ea61ec9d53996`；
+- 全量 26-case Agent 评测 26/26 PASS，脱敏证据见 `evals/product-research/evidence/20260713_230407_285700/`；
+- 独立 P0 评测 23/23 PASS，脱敏证据见 `evals/product-research/evidence/20260713_234711_087988/`；
+- 两次正式运行的 Codex 版本均为 `codex-cli 0.144.2`，命令配置均为 `codex_exec_ephemeral_workspace_write_v4`；`evaluated_commit / codex_version / command_profile` 的 `metadata_sources` 均为 `run_metadata`；
+- `P01A/P01B` 平台路由、`L01/L02` proposed/active 因果门、`X01` 压力排序反转、`W01/W02` 零写操作边界均在本次全量运行中通过；
+- `IR01–IR04` 是静态契约和人工验收规范，尚不是 Agent 自动评测结果；
 - learned v2 使用结构化 `rule_id / status / scope / condition_tag_ids / action / evidence`，不再从规则摘要猜动作；
 - `status: proposed` 不改变排序，只有显式迁移后的 `status: active` 才改变排序；CLI 的 `confirmed_by` 是自报字段，真实人工授权仍依赖宿主权限或 Git review；
 - 视频回归同时证明三个完整标签命中候选被调整、`Shoe crease protector` 只有部分标签且未被误伤；
@@ -75,3 +79,5 @@ Agent 模式会调用新的 Codex 进程并消耗模型额度，按需执行：
 python3 scripts/run_product_research_evals.py --mode agent --case DS06
 python3 scripts/run_product_research_evals.py --mode agent --case DS07
 ```
+
+仓库中的正式 evidence 是两次固定运行的脱敏快照；重新运行会受当时模型与额度状态影响，不应把“本地可重跑”理解为保证产生字节级相同的新结果。

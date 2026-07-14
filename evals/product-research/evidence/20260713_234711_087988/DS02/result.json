@@ -1,0 +1,94 @@
+{
+  "blocked_pending_data": [],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "synthetic_amazon_market",
+        "provider_variant": null,
+        "read_operations": [
+          "fixture_market_snapshot"
+        ],
+        "source_role": "direct_market_data"
+      },
+      {
+        "provider": "synthetic_cost_fixture",
+        "provider_variant": null,
+        "read_operations": [
+          "fixture_known_cost_formula"
+        ],
+        "source_role": "official_reference"
+      },
+      {
+        "provider": "synthetic_1688_supply",
+        "provider_variant": null,
+        "read_operations": [
+          "fixture_supply_snapshot"
+        ],
+        "source_role": "direct_market_data"
+      }
+    ],
+    "transformations_used": [
+      "linkfox_creative"
+    ]
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/amazon.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "用两个独立的 Amazon US 只读市场来源核验搜索需求、销量口径、集中度、评论门槛、CPC 和广告依赖。",
+    "核实完整平台费、FBA与头程、广告、退货、税费及现金周期；当前40%仅为合成已知成本口径毛利。",
+    "核实产品合规、知识产权、供应交期、尺寸及样品质量。"
+  ],
+  "notes": [
+    "报告仅分析 candidate_id=linkfox-assisted。",
+    "全部候选事实均来自隔离评测中的合成数据，真实市场数据链路尚未验证。",
+    "LinkFox 未被列为事实来源；linkfox_creative 仅记录在 transformations_used，用于图片与内容生产能力观察，不作为销量、搜索需求、利润或转化证据。",
+    "learned_tiktok_same_density_diff_001 的状态为 proposed，且范围为 TikTok，因此未参与本次 Amazon 评分。"
+  ],
+  "platform_adapter": "amazon",
+  "recommended": [
+    {
+      "candidate_id": "linkfox-assisted",
+      "fit_refs": [
+        "profile.constraints.target_marketplaces includes amazon-us",
+        "profile.constraints.target_countries includes US",
+        "profile.constraints.capital_per_sku_max=30000 CNY",
+        "profile.preferences.margin_floor_pct=35",
+        "profile.capabilities.supply_chain=1688采购",
+        "profile.capabilities.content_skill=5",
+        "profile.preferences.product_style includes 功能改良"
+      ],
+      "misfit_refs": [
+        "profile.capabilities.ad_skill=3",
+        "profile.capabilities.team_size=2",
+        "sop.判断习惯 requires perceptible structural, bundle, or content differentiation when same-product density is high"
+      ],
+      "rank": 1,
+      "scores": {
+        "capability_fit": 5,
+        "competition": 4,
+        "demand": 4,
+        "margin": 4,
+        "risk": 3
+      },
+      "total_score": 4.1
+    }
+  ],
+  "report_path": "reports/eval-content/2026-07-13_amazon-us-linkfox-assisted.md",
+  "rule_effects": [],
+  "seller_id": "eval-content",
+  "status": "completed"
+}

@@ -4,7 +4,7 @@
 
 它不把“销量高”直接当答案，而是按固定顺序执行：确认 `seller_id` → 读取 profile/SOP/最近决策 → 识别平台与数据角色 → 数据溯源 → 硬过滤 → 可复算评分 → 逐候选个性化归因 → 风险与最小验证。
 
-当前状态：**Skill、合成 demo、离线单测、黑盒评测 cases 和一键录屏轨迹均可运行；记忆闭环只在合成数据中可复现，真实卖家精灵/SIF/Sorftime/领星数据及真实经营效果尚未验证。**
+当前状态：**Skill、合成 demo、离线单测、录屏轨迹、全量 26-case Agent 评测和独立 P0 复跑均已通过；记忆闭环只在合成数据中可复现，真实卖家精灵/SIF/Sorftime/领星数据及真实经营效果尚未验证。**
 
 录屏开场定位、对外表述护栏和分层图见 `references/demo-opening-positioning.md`。不要把“跨工具决策记忆缺口”说成“所有工具都无状态”或“市场上无人做”。
 
@@ -29,7 +29,7 @@
 python3 scripts/verify_delivery.py
 ```
 
-该命令依次运行：仓库结构校验、26-case 静态契约、132 个行为单测、数据接入状态检查、录屏双断言回归，以及一份写入忽略目录的临时合成报告。
+该命令依次运行：仓库结构校验、26-case 静态契约、137 个行为单测、数据接入状态检查、录屏双断言回归，以及一份写入忽略目录的临时合成报告。
 
 从 ZIP 解压到新目录后，先注册项目 Skill：
 
@@ -76,19 +76,28 @@ python3 scripts/run_product_research_evals.py --mode agent --suite core
 
 Agent 模式会从已提交且命中输入白名单的文件构造临时工作区，不复制 case 金标、测试、真实 seller、原始报告或本地凭证，再启动新的 `codex exec`。评分器同时检查最终 JSON、生成的 Markdown 报告、文件 diff、结构化工具调用和只保留哈希/分类的命令审计，避免 Agent 只在回复中自报合格。原始事件流、命令、stderr 和完整 workspace 不落盘。运行 Agent cases 会消耗模型时间/额度；默认只跑 static。
 
+### 当前脱敏证据
+
+- 全量 Agent：26/26 PASS，证据见 `evals/product-research/evidence/20260713_230407_285700/summary.json`；
+- 独立 P0：23/23 PASS，证据见 `evals/product-research/evidence/20260713_234711_087988/summary.json`；
+- 两次正式运行均评测提交 `92e0a6040967e1c7ac9d7bc1a60ea61ec9d53996`，使用 `codex-cli 0.144.2` 与 `codex_exec_ephemeral_workspace_write_v4`；
+- evidence 的 `evaluated_commit / codex_version / command_profile` 均直接来自 runner `run_metadata`，公开副本不含原始 prompt、原命令、命令输出、环境变量或工作目录。
+
+这两组 PASS 使用合成 fixtures，证明流程、状态机、隔离、来源纪律和安全门禁可复现，不证明真实市场需求、真实商品可卖或利润提升。`IR01–IR04` 仍是静态契约与人工验收 cases，不属于上述 26 个 Agent cases。
+
 关键覆盖：
 
 - 无 seller_id/profile/SOP 必须停止；
 - 禁做类目、属性和超资金一票否决；
 - 缺事实不补中性分或费率；
 - 非 `active` learned 不参与，只有完成显式确认迁移的 `active` 规则才可改变排序；`confirmed_by` 是自报审计字段，不是身份认证；
-- Amazon/TikTok 路由变形；
-- 强制策略的忠实执行、成本压力测试和排序反转；
+- `P01A/P01B` 的 Amazon/TikTok canonical 路由；
+- `L01/L02` 的 proposed/active 因果变化，以及 `X01` 的强制策略压力排序反转；
 - Reddit 只作需求验证，1688 只作供给验证；
 - 卖家精灵/SIF 的来源角色、指标冲突与估算口径；
 - 紫鸟、AMZ123、领星、知无不言、翻译、RPA 和 LinkFox 不得冒充市场需求证据；
-- 催评、提现、广告、店铺登录、自动上架和履约写能力的拒绝；
-- 多卖家隔离、零平台写操作、数据内提示注入防护。
+- `W01/W02` 的零平台写调用，以及对催评、提现、广告、店铺登录、自动上架和履约写能力的拒绝；
+- 多卖家隔离与数据内提示注入防护。
 
 ## 数据接入
 

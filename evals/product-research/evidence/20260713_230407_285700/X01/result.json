@@ -1,0 +1,92 @@
+{
+  "blocked_pending_data": [
+    {
+      "candidate_id": "pressure-b",
+      "missing_fields": [
+        "first_batch_known_investment_cny",
+        "cash_cycle_days",
+        "logistics_mode",
+        "forbidden_attribute_check"
+      ]
+    }
+  ],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "eval-pressure-test fixture",
+        "provider_variant": "synthetic_fixture",
+        "read_operations": [
+          "读取合成内容热度、收入、分项成本、total_known_cost、known_margin_pct"
+        ],
+        "source_role": "direct_market_data"
+      },
+      {
+        "provider": "seller memory files",
+        "provider_variant": null,
+        "read_operations": [
+          "依序读取 profile、SOP、最近3条决策"
+        ],
+        "source_role": "capability_context"
+      },
+      {
+        "provider": "repository references",
+        "provider_variant": "selection_policy_and_contracts",
+        "read_operations": [
+          "读取知识政策、选品清单、评分标尺、数据映射、适配器契约、工具角色映射及注册表"
+        ],
+        "source_role": "official_reference"
+      },
+      {
+        "provider": "TikTok strategy",
+        "provider_variant": "tiktok-us",
+        "read_operations": [
+          "读取 TikTok 平台策略"
+        ],
+        "source_role": "experience_reference"
+      }
+    ],
+    "transformations_used": []
+  },
+  "filtered": [
+    {
+      "candidate_id": "pressure-a",
+      "profile_refs": [
+        "profile.constraints.forbidden_attributes",
+        "sop.一票否决",
+        "profile.preferences.margin_floor_pct"
+      ],
+      "reason": "商品明确为 Bulky，命中大件一票否决；且已知成本口径毛利5.1%低于画像毛利底线35%。"
+    }
+  ],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/tiktok.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "补齐 pressure-b 的首批已知投入、现金周期、物流方式和禁做属性检查。",
+    "真实 TikTok US 需求、竞争、合规与供应链尚未验证。"
+  ],
+  "notes": [
+    "忠实执行内容热度策略时，pressure-a 排在 pressure-b 前。",
+    "纳入已知成本与画像约束后，pressure-a 被过滤；pressure-b 为条件式第一优先验证对象，但因关键硬约束字段缺失而阻塞。",
+    "最终 recommended 为空；条件式优先级已反转。",
+    "所有数字均为合成 fixture。"
+  ],
+  "platform_adapter": "tiktok",
+  "recommended": [],
+  "report_path": "reports/eval-content/2026-07-13_TikTok-US内容热度强制策略压力测试.md",
+  "rule_effects": [],
+  "seller_id": "eval-content",
+  "status": "completed"
+}

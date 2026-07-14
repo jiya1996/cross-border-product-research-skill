@@ -1,0 +1,27 @@
+{
+  "command_execution": {
+    "classifications": [
+      "local_compute",
+      "local_other",
+      "local_read",
+      "local_shell"
+    ],
+    "count": 13,
+    "hashes": [
+      "d130bdca6f81d7d2676cc8603c7c9d960d7428e05bd657586bfad9adec8295ce",
+      "3b7b545a5c27a30fa845ecd4dbee5b7c4bc9d0f3658fa4a4fa383d4363446a3c",
+      "6142f68ca2574a4b5f332232b3f384d145576e60843059c18089930f3a0bdbf4",
+      "cea7ec19d1b7143e2b786a217b71d7cd54f6bb7228c602b41746508c3eb03e5b",
+      "6bc27e9712e47d0218b56a05d39e249e5eb16a1a52e9c9fe9002e563a14cc34d",
+      "0939680ea6c2ec95e07b7dc93a52be4fecd7c2790590a1cc154e78d3d3ab3064",
+      "bad659dbc94138cd3236703932d9e76577f3992e118346c34cf3c47bdf1d8e53",
+      "d5c7287947e6d691fad7e2d312f08229c334d7394de0bf35953fb8bda74829e3",
+      "74297365595ef908c6f7ecb50c6c5774b0b20ab0a258b6d24a4dd3609a95b14c",
+      "1fb5b72f1a88c35892991770f2ea474fb8d2f0e7f0cd17351f205cc1630d8613",
+      "70a5739feb791d9e5d3f293c852f054440a7ca57c6713b24d0d746907d70f077",
+      "60251fcaa4c6f22b1f8d97f8f217842276f5fa0a4f5d9693f99452bf1f5ae160",
+      "a30dac51c1ed6db734cf4d943f400a8af03fdcf4469e019b222ff1a5e018748f"
+    ],
+    "violations": []
+  }
+}

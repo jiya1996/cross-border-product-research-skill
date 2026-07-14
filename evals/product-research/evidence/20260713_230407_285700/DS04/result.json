@@ -1,0 +1,61 @@
+{
+  "blocked_pending_data": [
+    {
+      "candidate_id": "community-hype",
+      "missing_fields": [
+        "verified_sales",
+        "verified_cpc",
+        "verified_certification_cost",
+        "verified_margin",
+        "market",
+        "collected_at"
+      ]
+    }
+  ],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "zhiwubuyan",
+        "provider_variant": null,
+        "read_operations": [
+          "read references/demo-data/eval-tool-role-boundaries.json candidate_id=community-hype"
+        ],
+        "source_role": "experience_reference"
+      }
+    ],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/amazon.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "核验作者身份与原始帖子。",
+    "核验 Amazon US 站点、采集日期、数据窗口和指标口径。",
+    "取得销量、CPC、认证费用与利润的原始报表或符合 references 纪律的来源。"
+  ],
+  "notes": [
+    "该帖子按 knowledge-policy 分类为经验型知识；其中的日销、CPC、认证费和利润不能作为事实数字、硬过滤依据或评分证据。",
+    "候选只进入数据完整性检查，随后转入 blocked_pending_data；不进入实质硬过滤判定、打分或推荐。",
+    "真实市场数据链路未验证。",
+    "唯一 learned 规则状态为 proposed，未参与本次分析。"
+  ],
+  "platform_adapter": "amazon",
+  "recommended": [],
+  "report_path": "reports/eval-content/2026-07-13_community-hype.md",
+  "rule_effects": [],
+  "seller_id": "eval-content",
+  "status": "completed"
+}

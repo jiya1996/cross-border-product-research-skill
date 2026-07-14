@@ -1,0 +1,170 @@
+{
+  "blocked_pending_data": [],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "repository_fixture",
+        "provider_variant": "learned_transfer_candidates",
+        "read_operations": [
+          "read references/demo-data/eval-learned-transfer-candidates.md"
+        ],
+        "source_role": "direct_market_data"
+      },
+      {
+        "provider": "seller_profile_files",
+        "provider_variant": "profile_sop_decisions",
+        "read_operations": [
+          "read sellers/eval-content/profile.yaml",
+          "read sellers/eval-content/sop.md",
+          "read three latest decision records"
+        ],
+        "source_role": "capability_context"
+      }
+    ],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/tiktok.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "核实每个候选的完整单位成本与毛利，至少覆盖采购、平台费、头程/尾程、广告、退货、税费及适用合规成本。",
+    "补充真实 TikTok US 热门视频、互动、评论、转化、竞争与物流证据。"
+  ],
+  "notes": [
+    "报告已写盘并直接读取核对，Markdown 候选、规则效果、过滤项和待核实项与本 JSON 一致。",
+    "所有数值和结论均属于 effect-only 合成假设实验，不构成真实经营建议。"
+  ],
+  "platform_adapter": "tiktok",
+  "recommended": [
+    {
+      "candidate_id": "lr-d88",
+      "fit_refs": [
+        "profile.capabilities.content_skill=5",
+        "sop.判断习惯.TikTok优先三秒内展示痛点和前后对比",
+        "profile.constraints.capital_per_sku_max=30000",
+        "profile.constraints.cash_cycle_tolerance_days=45"
+      ],
+      "misfit_refs": [
+        "profile.preferences.competition_tolerance=medium",
+        "profile.capabilities.team_size=2"
+      ],
+      "rank": 1,
+      "scores": {
+        "capability_fit": 5,
+        "competition": 3,
+        "demand": 3,
+        "margin": null,
+        "risk": 3
+      },
+      "total_score": null
+    },
+    {
+      "candidate_id": "lr-a17",
+      "fit_refs": [
+        "profile.capabilities.content_skill=5",
+        "sop.判断习惯.TikTok优先三秒内展示痛点和前后对比",
+        "profile.constraints.capital_per_sku_max=30000",
+        "profile.constraints.cash_cycle_tolerance_days=45"
+      ],
+      "misfit_refs": [
+        "sop.判断习惯.同款过多时必须有可感知差异",
+        "profile.preferences.competition_tolerance=medium"
+      ],
+      "rank": 2,
+      "scores": {
+        "capability_fit": 5,
+        "competition": 1,
+        "demand": 3,
+        "margin": null,
+        "risk": 4
+      },
+      "total_score": null
+    },
+    {
+      "candidate_id": "lr-b42",
+      "fit_refs": [
+        "profile.capabilities.content_skill=5",
+        "profile.preferences.product_style=功能改良",
+        "profile.constraints.capital_per_sku_max=30000",
+        "profile.constraints.cash_cycle_tolerance_days=45"
+      ],
+      "misfit_refs": [
+        "sop.判断习惯.同款过多时必须有可感知差异",
+        "profile.preferences.competition_tolerance=medium"
+      ],
+      "rank": 2,
+      "scores": {
+        "capability_fit": 5,
+        "competition": 1,
+        "demand": 3,
+        "margin": null,
+        "risk": 4
+      },
+      "total_score": null
+    },
+    {
+      "candidate_id": "lr-c63",
+      "fit_refs": [
+        "profile.capabilities.content_skill=5",
+        "profile.preferences.product_style=轻创新/功能改良/情绪价值",
+        "profile.constraints.capital_per_sku_max=30000",
+        "profile.constraints.cash_cycle_tolerance_days=45"
+      ],
+      "misfit_refs": [
+        "sop.判断习惯.同款过多时必须有可感知差异",
+        "profile.preferences.competition_tolerance=medium"
+      ],
+      "rank": 2,
+      "scores": {
+        "capability_fit": 5,
+        "competition": 1,
+        "demand": 3,
+        "margin": null,
+        "risk": 4
+      },
+      "total_score": null
+    }
+  ],
+  "report_path": "reports/eval-content/2026-07-13_tiktok-us-learned-rule-effect-only.md",
+  "rule_effects": [
+    {
+      "after": 1,
+      "before": 2,
+      "candidate_id": "lr-a17",
+      "delta": -1,
+      "dimension": "competition",
+      "rule_id": "learned_tiktok_same_density_diff_001"
+    },
+    {
+      "after": 1,
+      "before": 2,
+      "candidate_id": "lr-b42",
+      "delta": -1,
+      "dimension": "competition",
+      "rule_id": "learned_tiktok_same_density_diff_001"
+    },
+    {
+      "after": 1,
+      "before": 2,
+      "candidate_id": "lr-c63",
+      "delta": -1,
+      "dimension": "competition",
+      "rule_id": "learned_tiktok_same_density_diff_001"
+    }
+  ],
+  "seller_id": "eval-content",
+  "status": "completed"
+}

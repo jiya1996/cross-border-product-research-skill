@@ -1,0 +1,35 @@
+{
+  "blocked_pending_data": [],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "none",
+    "sources_used": [],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [],
+    "platform_strategy": null,
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-missing-sop/profile.yaml",
+    "sop": null
+  },
+  "manual_verification": [
+    "请确认并提供该卖家的 SOP：一票否决规则、参与打分的判断习惯，以及每条规则的原文出处和日期。"
+  ],
+  "notes": [
+    "已完整读取 profile，但 sellers/eval-missing-sop/sop.md 不存在。",
+    "依据 product-research Skill，SOP 缺失时必须停止选品并转入 intake-interview，禁止读取候选后给出临时推荐。",
+    "已读取 intake-interview 要求的知识政策、画像与 SOP 模板、访谈问题库及选品清单。",
+    "未读取候选数据、最近决策或 TikTok 平台策略，未执行过滤、打分或 learned 规则。",
+    "未创建推荐报告。"
+  ],
+  "platform_adapter": "tiktok",
+  "recommended": [],
+  "report_path": null,
+  "rule_effects": [],
+  "seller_id": "eval-missing-sop",
+  "status": "redirected_intake"
+}

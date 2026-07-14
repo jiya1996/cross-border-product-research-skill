@@ -1,0 +1,104 @@
+{
+  "blocked_pending_data": [],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "sellersprite",
+        "provider_variant": "mcp_research",
+        "read_operations": [
+          "synthetic_product_market_keyword_bundle: ss-sif-complete 的产品、市场、关键词、Top10 集中度和 CPC 合成证据"
+        ],
+        "source_role": "direct_market_data"
+      },
+      {
+        "provider": "sif",
+        "provider_variant": "mcp_analysis",
+        "read_operations": [
+          "synthetic_traffic_and_ads_bundle: ss-sif-complete 的流量结构和广告依赖合成证据"
+        ],
+        "source_role": "direct_market_data"
+      },
+      {
+        "provider": "synthetic_cost_fixture",
+        "provider_variant": null,
+        "read_operations": [
+          "fixture_known_cost_formula: ss-sif-complete 的已知成本口径毛利公式结果"
+        ],
+        "source_role": "official_reference"
+      },
+      {
+        "provider": "synthetic_1688_supply",
+        "provider_variant": null,
+        "read_operations": [
+          "fixture_supply_snapshot: ss-sif-complete 的供给报价与 MOQ 合成证据"
+        ],
+        "source_role": "direct_market_data"
+      }
+    ],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/amazon.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "真实卖家精灵与 SIF 只读数据链路尚未验证；当前结果仅来自 synthetic demo。",
+    "核实真实搜索量、估算销量趋势、关键词匹配口径及 Top10 集中度分母。",
+    "核实评论数、评分、新品占比、品牌与卖家集中度，确认是否超过 review_moat_max=3000。",
+    "核实完整平台费、头程/FBA、广告、退货、税费和现金周期；42% 只能称已知成本口径毛利。",
+    "核实合规、侵权、材质适配、退货风险以及真实供应报价、MOQ、重量和交期。",
+    "补齐首批投入、单位重量和交期的候选级 evidence 回指。"
+  ],
+  "notes": [
+    "SIF 的 38% 付费流量占比仅用于竞争、流量结构和广告依赖判断，未用于证明需求。",
+    "卖家精灵的销量、搜索量、集中度和 CPC 均为合成估算值，不是 Amazon 官方实销或实际转化数据。",
+    "1688 合成数据仅支持供给侧、毛利、能力匹配和风险判断，不证明 Amazon US 需求。",
+    "唯一 learned 规则状态为 proposed 且作用域为 TikTok，未参与评分。",
+    "建议进入最小验证，不等同于上架建议；综合置信度为中低。"
+  ],
+  "platform_adapter": "amazon",
+  "recommended": [
+    {
+      "candidate_id": "ss-sif-complete",
+      "fit_refs": [
+        "profile.constraints.target_marketplaces=amazon-us",
+        "profile.constraints.target_countries=US",
+        "profile.capabilities.supply_chain=1688采购",
+        "profile.capabilities.content_skill=5",
+        "profile.preferences.margin_floor_pct=35",
+        "profile.constraints.capital_per_sku_max=30000 CNY",
+        "profile.preferences.product_style 包含功能改良"
+      ],
+      "misfit_refs": [
+        "profile.capabilities.ad_skill=3",
+        "profile.capabilities.team_size=2",
+        "profile.preferences.review_moat_max=3000"
+      ],
+      "rank": 1,
+      "scores": {
+        "capability_fit": 4,
+        "competition": 3,
+        "demand": 4,
+        "margin": 4,
+        "risk": 3
+      },
+      "total_score": 3.7
+    }
+  ],
+  "report_path": "reports/eval-content/2026-07-13_amazon-us-reusable-pet-hair-roller.md",
+  "rule_effects": [],
+  "seller_id": "eval-content",
+  "status": "completed"
+}

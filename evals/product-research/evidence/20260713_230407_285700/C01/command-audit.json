@@ -1,0 +1,23 @@
+{
+  "command_execution": {
+    "classifications": [
+      "local_compute",
+      "local_other",
+      "local_read",
+      "local_shell"
+    ],
+    "count": 9,
+    "hashes": [
+      "d130bdca6f81d7d2676cc8603c7c9d960d7428e05bd657586bfad9adec8295ce",
+      "284b06b3a41ce12f88c986e6be58c64798f243dac63400d4ff2ed43fefe1fdf1",
+      "35684273d1f7279ddd466e897cbd7e27208fbef3a4a0c6c00a2fbaebc527209f",
+      "3066052f2ab1f4e6fdb9b048f76d9daee6565e510f100a56981dd64603c8c65f",
+      "d8a471a426af76e426e23937c67240520ceac8ec865ad0644f734511e9df8cf3",
+      "baac32b175bbb850f6454141eab292c6b3a62365d668a5b1710d5737ee21a96c",
+      "a8faea465a6710c8b4a7851afd76d887c5a383e472620ae5843d4d2694d7543e",
+      "4a306834c246742076be1362f699f5bd1fa1fcf774e6d14be924ed3cb5c5bb66",
+      "da62d7a72f1e3779541405fcb60427331b5843806d0fb018c8d5d0ccc6cd998a"
+    ],
+    "violations": []
+  }
+}

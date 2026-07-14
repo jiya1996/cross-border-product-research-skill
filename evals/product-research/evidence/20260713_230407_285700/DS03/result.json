@@ -1,0 +1,63 @@
+{
+  "blocked_pending_data": [
+    {
+      "candidate_id": "ops-only",
+      "missing_fields": [
+        "target_market_demand",
+        "competition",
+        "price",
+        "procurement_cost",
+        "moq",
+        "weight",
+        "compliance"
+      ]
+    }
+  ],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "references_demo_fixture",
+        "provider_variant": "ops-only",
+        "read_operations": [
+          "read references/demo-data/eval-tool-role-boundaries.json candidate_id=ops-only"
+        ],
+        "source_role": "capability_context"
+      }
+    ],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/amazon.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "补充 Amazon US 需求证据，包括关键词搜索量、销量或 BSR 趋势、数据窗口与指标口径",
+    "补充 Amazon US 竞争证据，包括评论门槛、Top N 集中度、CPC、广告依赖和差异化空间",
+    "补充价格、采购成本、MOQ、重量、平台费、物流费、广告费、退货成本及可复算毛利",
+    "补充供应商、交期、定制能力、稳定交付和合规要求证据"
+  ],
+  "notes": [
+    "当前不能推荐 ops-only；紫鸟浏览器、AMZ123、领星 ERP、亚马逊广告学习网站和 Google 翻译的可用性不能替代 Amazon US 市场、成本或供应链证据。",
+    "候选未确认违反硬约束，因此未列入 filtered，而是列入 blocked_pending_data。",
+    "唯一 learned 规则状态为 proposed 且作用域为 TikTok，未参与本次评分。",
+    "真实市场数据链路未验证；本次只使用仓库 synthetic_demo fixture，未调用外部数据工具或任何写操作。"
+  ],
+  "platform_adapter": "amazon",
+  "recommended": [],
+  "report_path": "reports/eval-content/2026-07-13_amazon-ops-only工具角色边界.md",
+  "rule_effects": [],
+  "seller_id": "eval-content",
+  "status": "completed"
+}

@@ -1,0 +1,77 @@
+{
+  "blocked_pending_data": [
+    {
+      "candidate_id": "cpc-conflict",
+      "missing_fields": [
+        "normalized_cpc",
+        "procurement_cost",
+        "moq",
+        "weight",
+        "complete_margin"
+      ]
+    }
+  ],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "sellersprite",
+        "provider_variant": "mcp_research",
+        "read_operations": [
+          "read references/demo-data/eval-tool-role-boundaries.json source_id=ss-cpc via synthetic_keyword_cpc_broad"
+        ],
+        "source_role": "direct_market_data"
+      },
+      {
+        "provider": "sif",
+        "provider_variant": "mcp_analysis",
+        "read_operations": [
+          "read references/demo-data/eval-tool-role-boundaries.json source_id=sif-cpc via synthetic_keyword_cpc_exact"
+        ],
+        "source_role": "direct_market_data"
+      },
+      {
+        "provider": "synthetic_amazon_market",
+        "provider_variant": null,
+        "read_operations": [
+          "read references/demo-data/eval-tool-role-boundaries.json source_id=amazon-main via fixture_market_snapshot"
+        ],
+        "source_role": "direct_market_data"
+      }
+    ],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/amazon.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "对同一 Amazon US 关键词或 ASIN，在同一采集日补采卖家精灵与 SIF CPC。",
+    "统一两端的匹配方式、时间窗口和指标定义，并补充广告位置、竞价策略、设备或流量范围、币种及观测/估算属性。",
+    "保存两端原始只读响应与查询参数；统一口径后若仍冲突，继续并列保留，不自动平均。",
+    "补齐采购成本、MOQ、重量、完整成本毛利、商品属性与合规、首批已知投入、关键词需求、评论护城河、集中度和差异化证据。"
+  ],
+  "notes": [
+    "仅分析 candidate_id=cpc-conflict。",
+    "卖家精灵 broad-match 30 天 CPC 估算为 1.20 USD，采集于 2026-07-10；SIF exact-match 7 天 CPC 估算为 0.65 USD，采集于 2026-07-12。两者均保留，未平均、未任选、未猜测。",
+    "实时卖家精灵与 SIF 数据链路未验证；本次全部市场数值均为隔离环境中的 synthetic_demo。",
+    "唯一 learned 规则状态为 proposed，且范围为 TikTok，未参与本次评分。"
+  ],
+  "platform_adapter": "amazon",
+  "recommended": [],
+  "report_path": "reports/eval-content/2026-07-13_CPC冲突核验.md",
+  "rule_effects": [],
+  "seller_id": "eval-content",
+  "status": "blocked_missing_data"
+}
