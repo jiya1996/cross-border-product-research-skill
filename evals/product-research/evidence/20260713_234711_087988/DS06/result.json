@@ -1,0 +1,67 @@
+{
+  "blocked_pending_data": [
+    {
+      "candidate_id": "lingxing-history-only",
+      "missing_fields": [
+        "target_market_demand",
+        "target_market_competition",
+        "current_procurement_cost",
+        "moq",
+        "weight",
+        "compliance",
+        "first_batch_known_investment",
+        "current_complete_margin"
+      ]
+    }
+  ],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "lingxing",
+        "provider_variant": null,
+        "read_operations": [
+          "读取 references/demo-data/eval-tool-role-boundaries.json 中 source_id=lingxing-own",
+          "读取 candidate_id=lingxing-history-only 的过去 90 天合成历史数据"
+        ],
+        "source_role": "seller_first_party_data"
+      }
+    ],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/amazon.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "补充带站点、日期、窗口和指标口径的 Amazon US 关键词、类目、搜索趋势、BSR、评论门槛、集中度、价格带、CPC及广告依赖数据。",
+    "核实当前候选的采购价、MOQ、重量和尺寸、头程、FBA及佣金、广告与退货成本、首批已知投入和完整成本毛利。",
+    "明确候选品类、材质、敏感属性、ASIN/MSKU或可比产品范围，并核实认证、侵权和其他合规要求。",
+    "核实真实领星只读链路、历史指标计算口径及历史产品与当前候选的可比性。"
+  ],
+  "notes": [
+    "当前不能推荐；候选因需求、竞争及硬约束字段不足进入 blocked_pending_data。",
+    "领星数据仅代表当前卖家过去90天的历史经营范围，可用于margin、capability_fit、risk的历史回测信号，不得外推为Amazon US全市场需求。",
+    "本次结果是历史回测边界评估，不是未来预测，也未报告预测准确率。",
+    "历史毛利率31%、退款率11%、库存周转84天和广告支出占比24%均为合成评测数据。",
+    "真实领星live query尚未验证；本次只读取仓库合成fixture。",
+    "没有active learned规则参与评分；proposed规则未生效。"
+  ],
+  "platform_adapter": "amazon",
+  "recommended": [],
+  "report_path": "reports/eval-content/2026-07-14_领星历史边界评估.md",
+  "rule_effects": [],
+  "seller_id": "eval-content",
+  "status": "completed"
+}

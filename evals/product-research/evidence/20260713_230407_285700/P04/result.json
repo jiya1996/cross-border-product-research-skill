@@ -1,0 +1,57 @@
+{
+  "blocked_pending_data": [
+    {
+      "candidate_id": "reddit-travel-pill-label-001",
+      "missing_fields": [
+        "目标平台需求与竞争数据",
+        "供应链数据",
+        "利润数据"
+      ]
+    }
+  ],
+  "conclusion_type": "demand_hypothesis_only",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "reddit",
+        "provider_variant": null,
+        "read_operations": [
+          "sed -n '/^## Reddit/,/^## /p' references/demo-data/eval-community-supply.md"
+        ],
+        "source_role": "direct_market_data"
+      }
+    ],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/reddit.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "核实 Amazon US 或 TikTok US 的需求与竞争数据。",
+    "核实供应商材质、耐磨和防水测试、MOQ、采购价及交期。",
+    "核实平台费、物流、广告、退货、税费、合规分类及费用。"
+  ],
+  "notes": [
+    "Reddit 合成样本为需求假设提供方向性支持，但不能证明目标平台销量或商业可行性。",
+    "候选未评分，且仅进入 blocked_pending_data。",
+    "proposed learned 规则未参与打分。"
+  ],
+  "platform_adapter": "reddit",
+  "recommended": [],
+  "report_path": "reports/eval-content/2026-07-13_reddit旅行药盒标签需求假设.md",
+  "rule_effects": [],
+  "seller_id": "eval-content",
+  "status": "completed"
+}

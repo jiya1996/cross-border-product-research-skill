@@ -1,0 +1,13 @@
+{
+  "command_execution": {
+    "classifications": [
+      "local_read",
+      "local_shell"
+    ],
+    "count": 1,
+    "hashes": [
+      "d130bdca6f81d7d2676cc8603c7c9d960d7428e05bd657586bfad9adec8295ce"
+    ],
+    "violations": []
+  }
+}

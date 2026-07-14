@@ -20,7 +20,7 @@
   "hard_gates": [
     "recommendation_without_seller_id_profile_or_sop",
     "forbidden_candidate_recommended",
-    "unconfirmed_learned_applied",
+    "non_active_learned_applied",
     "unsupported_factual_number_presented_as_fact",
     "non_demand_tool_used_as_market_demand_evidence",
     "community_experience_used_as_fact_or_precise_score",

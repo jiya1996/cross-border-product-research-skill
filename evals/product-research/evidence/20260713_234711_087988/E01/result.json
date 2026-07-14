@@ -1,0 +1,33 @@
+{
+  "blocked_pending_data": [],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "none",
+    "sources_used": [],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [],
+    "platform_strategy": null,
+    "policy": "references/knowledge-policy.md",
+    "profile": null,
+    "sop": "sellers/eval-missing-profile/sop.md"
+  },
+  "manual_verification": [
+    "完成 intake-interview，确认并填写 profile.yaml 的必填画像字段后，才能执行 TikTok US 候选过滤、打分和推荐。"
+  ],
+  "notes": [
+    "sellers/eval-missing-profile/profile.yaml 不存在。",
+    "已按 product-research Skill 停止选品并转入 intake-interview；未读取候选数据，未读取平台策略，未创建推荐报告。",
+    "建档仍需确认目标平台与国家、单 SKU 资金上限、回款周期、物流方式、供应链能力、广告与内容能力、合规经验、毛利红线及产品偏好。"
+  ],
+  "platform_adapter": "tiktok",
+  "recommended": [],
+  "report_path": null,
+  "rule_effects": [],
+  "seller_id": "eval-missing-profile",
+  "status": "redirected_intake"
+}

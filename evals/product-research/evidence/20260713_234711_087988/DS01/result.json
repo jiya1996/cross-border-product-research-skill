@@ -1,0 +1,103 @@
+{
+  "blocked_pending_data": [],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "sellersprite",
+        "provider_variant": "mcp_research",
+        "read_operations": [
+          "Read ss-main product, market, keyword, concentration, and CPC evidence for candidate ss-sif-complete from references/demo-data/eval-tool-role-boundaries.json"
+        ],
+        "source_role": "direct_market_data"
+      },
+      {
+        "provider": "sif",
+        "provider_variant": "mcp_analysis",
+        "read_operations": [
+          "Read sif-main traffic structure and advertising-dependency evidence for candidate ss-sif-complete from references/demo-data/eval-tool-role-boundaries.json"
+        ],
+        "source_role": "direct_market_data"
+      },
+      {
+        "provider": "synthetic_cost_fixture",
+        "provider_variant": null,
+        "read_operations": [
+          "Read cost-main synthetic known-cost margin and first-batch-capital fields from references/demo-data/eval-tool-role-boundaries.json"
+        ],
+        "source_role": "official_reference"
+      },
+      {
+        "provider": "synthetic_1688_supply",
+        "provider_variant": null,
+        "read_operations": [
+          "Read supply-main synthetic supply price, MOQ, weight, and lead-time fields from references/demo-data/eval-tool-role-boundaries.json"
+        ],
+        "source_role": "direct_market_data"
+      }
+    ],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/amazon.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "Verify real Amazon US product, market, keyword, Top-10 concentration, and CPC data through a read-only SellerSprite capability using a consistent node and window.",
+    "Use SIF only to verify natural/paid traffic structure and advertising dependency; do not use it as complete market-demand proof.",
+    "Verify real 1688 quotations, MOQ, unit weight, lead time, roller durability, and cleanability with supplier samples.",
+    "Verify platform fees, FBA and inbound freight, advertising, returns, taxes, compliance, infringement risk, and the complete cash cycle before purchasing or launching."
+  ],
+  "notes": [
+    "Only candidate_id=ss-sif-complete was analyzed.",
+    "All numeric evidence is fictional synthetic evaluation data collected on 2026-07-12; live SellerSprite, SIF, and Sorftime query paths were not verified.",
+    "SellerSprite evidence was limited to product, market, keyword, concentration, and CPC analysis. Estimated sales were not treated as Amazon official sales, and CPC was not treated as conversion.",
+    "SIF evidence was limited to traffic structure and advertising-dependency assessment and did not increase the demand score.",
+    "The 42% figure is known-cost-basis margin, not actual margin.",
+    "The only learned rule has status proposed and TikTok scope, so it did not affect Amazon scoring."
+  ],
+  "platform_adapter": "amazon",
+  "recommended": [
+    {
+      "candidate_id": "ss-sif-complete",
+      "fit_refs": [
+        "profile.constraints.target_marketplaces includes amazon-us",
+        "profile.constraints.target_countries includes US",
+        "profile.capabilities.supply_chain=1688采购",
+        "profile.capabilities.content_skill=5",
+        "profile.preferences.product_style includes 轻创新, 功能改良, 情绪价值",
+        "profile.constraints.capital_per_sku_max=30000 CNY",
+        "profile.preferences.margin_floor_pct=35"
+      ],
+      "misfit_refs": [
+        "profile.capabilities.ad_skill=3",
+        "profile.capabilities.team_size=2",
+        "profile.constraints.cash_cycle_tolerance_days=45"
+      ],
+      "rank": 1,
+      "scores": {
+        "capability_fit": 4.0,
+        "competition": 3.5,
+        "demand": 4.0,
+        "margin": 4.0,
+        "risk": 3.0
+      },
+      "total_score": 3.8
+    }
+  ],
+  "report_path": "reports/eval-content/2026-07-13_Amazon-US-pet-hair-roller.md",
+  "rule_effects": [],
+  "seller_id": "eval-content",
+  "status": "completed"
+}

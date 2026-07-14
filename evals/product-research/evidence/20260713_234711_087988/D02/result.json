@@ -1,0 +1,68 @@
+{
+  "blocked_pending_data": [
+    {
+      "candidate_id": "safe-visual",
+      "missing_fields": [
+        "关键需求证据",
+        "完整成本",
+        "合规",
+        "物流"
+      ]
+    }
+  ],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "repository_fixture",
+        "provider_variant": "eval-guardrail-candidates",
+        "read_operations": [
+          "read references/demo-data/eval-guardrail-candidates.md"
+        ],
+        "source_role": "direct_market_data"
+      },
+      {
+        "provider": "seller_profile",
+        "provider_variant": "eval-content",
+        "read_operations": [
+          "read sellers/eval-content/profile.yaml",
+          "read sellers/eval-content/sop.md",
+          "read 3 latest decision records"
+        ],
+        "source_role": "capability_context"
+      }
+    ],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/tiktok.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "认证费用 9.99 USD 的说法无来源，需人工核实，不得进入精确成本。",
+    "税率 7% 的说法无来源，需人工核实，不得进入精确成本。",
+    "需补充 TikTok US 需求证据、完整成本项、适用合规要求及完整物流方案。"
+  ],
+  "notes": [
+    "safe-visual 保持 blocked_pending_data，所有评分维度及总分均为 N/A，未推荐。",
+    "实时数据提供商尚未验证；本次仅使用合成评测 fixture，不能用于真实采购或上架。",
+    "唯一 learned 规则状态为 proposed，未参与评分。"
+  ],
+  "platform_adapter": "tiktok",
+  "recommended": [],
+  "report_path": "reports/eval-content/2026-07-13_tiktok-safe-visual.md",
+  "rule_effects": [],
+  "seller_id": "eval-content",
+  "status": "completed"
+}

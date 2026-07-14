@@ -1,0 +1,32 @@
+{
+  "blocked_pending_data": [],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "none",
+    "sources_used": [],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [],
+    "platform_strategy": null,
+    "policy": null,
+    "profile": null,
+    "sop": null
+  },
+  "manual_verification": [
+    "请提供明确的 seller_id；确认后才能按固定顺序读取卖家画像、SOP、最近 10 条决策、知识政策、评分清单及 TikTok 策略。"
+  ],
+  "notes": [
+    "product-research Skill 要求任何选品分析前必须确认 seller_id。",
+    "未读取候选数据，未创建推荐报告，未输出选品推荐。"
+  ],
+  "platform_adapter": "tiktok",
+  "recommended": [],
+  "report_path": null,
+  "rule_effects": [],
+  "seller_id": null,
+  "status": "needs_input"
+}

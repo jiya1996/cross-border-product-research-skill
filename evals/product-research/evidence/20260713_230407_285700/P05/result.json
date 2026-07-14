@@ -1,0 +1,89 @@
+{
+  "blocked_pending_data": [
+    {
+      "candidate_id": "1688-s1",
+      "missing_fields": [
+        "稳定商品链接/商品标题/类目属性",
+        "采购价与阶梯数量及单位",
+        "样品价或打样费",
+        "交期",
+        "重量",
+        "尺寸",
+        "材质与敏感属性",
+        "包装/Logo/颜色/模具及最低定制量",
+        "供应商地区/经营年限/服务字段",
+        "跨境经验与可提供资料",
+        "首批总投入",
+        "目标平台需求数据"
+      ]
+    },
+    {
+      "candidate_id": "1688-s2",
+      "missing_fields": [
+        "稳定商品链接/商品标题/类目属性",
+        "采购价与阶梯数量及单位",
+        "样品价或打样费",
+        "交期",
+        "重量",
+        "尺寸",
+        "材质与敏感属性",
+        "包装/Logo/颜色/模具及最低定制量",
+        "供应商地区/经营年限/服务字段",
+        "药盒生产与品控能力",
+        "跨境经验与可提供资料",
+        "首批总投入",
+        "目标平台需求数据"
+      ]
+    }
+  ],
+  "conclusion_type": "supply_validation_only",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "1688_fixture",
+        "provider_variant": "eval-community-supply:1688-section",
+        "read_operations": [
+          "read references/demo-data/eval-community-supply.md section: 1688 信号"
+        ],
+        "source_role": "direct_market_data"
+      }
+    ],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/1688-supply-chain.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "核实两个搜索词各自第一屏的具体条数、账号及区域影响、被拦截数量、空白字段和解析失败数量",
+    "核实42条样本的稳定商品ID、规范化URL及去重结果",
+    "向S1补充价格、交期、物流属性、定制门槛和跨境资料",
+    "向S2核实药盒生产关系，并补充价格、交期、重量、尺寸、品控及跨境资料",
+    "另行取得Amazon US或TikTok US需求和竞争数据；1688样本不能证明目标市场需求"
+  ],
+  "notes": [
+    "第一屏样本为两个搜索词各一屏、合计42条的便利样本，不代表市场全貌。",
+    "仅使用指定文件的1688段进行供给验证，未使用其中的Reddit段。",
+    "真实市场数据链路未验证；数据接入检查仅确认synthetic demo可用。",
+    "画像中唯一learned规则状态为proposed，未参与过滤或打分。",
+    "两个候选均因关键字段不足而阻塞，未计算分项分、总分或商业排名。",
+    "报告写盘后已直接读取核对；可见正文包含独立行“- conclusion_type: supply_validation_only”。"
+  ],
+  "platform_adapter": "1688",
+  "recommended": [],
+  "report_path": "reports/eval-content/2026-07-13_旅行药盒防水标签1688供给验证.md",
+  "rule_effects": [],
+  "seller_id": "eval-content",
+  "status": "completed"
+}

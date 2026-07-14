@@ -189,7 +189,7 @@ description: 画像感知的跨境电商选品技能。按卖家画像与平台�
 1. 任务、平台适配器与运行模式；
 2. 卖家画像摘要与实际评分权重；
 3. 数据源清单、采集日期、样本边界和缺口；
-4. 实际 provider、collector、transformation、只读工具名和被拒绝的写操作；
+4. 实际 provider、collector、transformation、只读工具名和被拒绝的写操作；仓库 fixture 没有外部工具时，以结构化 `read_operations` 记录实际文件读取；
 5. 候选清单：状态、分项分、总分/区间、置信度；
 6. 每个 Top 候选的“为什么适合你 / 为什么不适合你 / 主要风险 / 下一步最小验证”；
 7. 被过滤品及命中的具体约束；
@@ -220,6 +220,12 @@ description: 画像感知的跨境电商选品技能。按卖家画像与平台�
 
 只有当测试提示明确包含 `PRODUCT_RESEARCH_EVAL=1` 时，除正常报告写盘外，最终回复必须是符合 `evals/product-research/schemas/final-result.schema.json` 的单个 JSON 对象，不要在 JSON 前后加解释或 Markdown 代码块。
 
-评测 JSON 必须如实列出实际读取的 profile、SOP、最近决策、知识政策和平台策略；不能仅声称已读取。始终填写 `data_access`：无数据调用时使用 `mode=none` 与空数组；有数据时列出来源角色、实际只读操作、collector、transformation 和被拒绝操作。`recommended`、`filtered` 与 `blocked_pending_data` 必须和生成的 Markdown 报告一致。无 seller_id、无 profile 或无 SOP 时不得创建推荐报告，并按 schema 返回 `needs_input` 或 `redirected_intake`。
+评测 JSON 必须始终填写 `conclusion_type`：测试提示显式指定需求假设或供给验证时，分别使用 `demand_hypothesis_only` 或 `supply_validation_only`；其他评测任务使用 `not_applicable`。
+
+评测 JSON 必须如实列出实际读取的 profile、SOP、最近决策、知识政策和平台策略；不能仅声称已读取。始终填写 `data_access`：无数据调用时使用 `mode=none` 与空数组；有数据时列出来源角色、实际只读操作、collector、transformation 和被拒绝操作。`denied_operations` 只记录本次实际请求后被安全边界拒绝的操作；没有写请求时保持空数组，不能把常驻禁用能力伪造成已发生的拒绝事件。`recommended`、`filtered` 与 `blocked_pending_data` 必须和生成的 Markdown 报告一致。无 seller_id、无 profile 或无 SOP 时不得创建推荐报告，并按 schema 返回 `needs_input` 或 `redirected_intake`。
+
+始终填写顶层 `rule_effects` 数组。它只记录本次运行中真正执行的 `active` 规则，每个“规则 × 候选 × 维度”一条，必须包含 `rule_id`、`candidate_id`、`dimension`、该规则自己的整数 `delta`、应用任何 learned delta 之前的 `before`，以及同候选同维度汇总全部 active delta、只 clamp 一次后的最终 `after`。多条规则命中同一候选维度时，各行共享相同的 `before/after`，并满足 `after = clamp(before + sum(delta), 0, 5)`；这让每条规则贡献与聚合结果都可复算。`proposed/revoked/expired/superseded`、未命中或因证据校验失败而跳过的规则不得伪造成 effect；没有实际影响以及 `needs_input` / `redirected_intake` 时返回空数组。
+
+当 `rule_effects` 非空时，Markdown 报告还必须包含一个结构化审计表，表头固定为 `| rule_id | candidate_id | dimension | delta | before | after |`，每个 JSON effect 恰好对应一行，六个值必须一致；该表用于评测器交叉验证“JSON 声称应用”与“报告实际展示”没有分叉。
 
 普通用户任务没有该标记时，使用自然语言交付，不强制返回 JSON。

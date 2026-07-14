@@ -1,0 +1,64 @@
+{
+  "blocked_pending_data": [
+    {
+      "candidate_id": "hubu-transported-ads",
+      "missing_fields": [
+        "target_market_demand",
+        "target_market_competition",
+        "current_procurement_cost",
+        "moq",
+        "weight",
+        "compliance"
+      ]
+    }
+  ],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [
+      "hubu_rpa"
+    ],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "amazon_ads",
+        "provider_variant": "report_export",
+        "read_operations": [
+          "read references/demo-data/eval-tool-role-boundaries.json source_id=hubu-collector for candidate_id=hubu-transported-ads"
+        ],
+        "source_role": "seller_first_party_data"
+      }
+    ],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/amazon.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "补充 Amazon US 目标市场需求与竞争的直接市场数据，并明确站点、采集日期、窗口和指标口径。",
+    "补充 1688 或其他供应链的采购成本、MOQ、重量/尺寸与交付信息。",
+    "补充完整成本及合规核验；未覆盖的费率、认证和税费均需人工核实。"
+  ],
+  "notes": [
+    "Amazon Ads 数据仅代表当前卖家的合成一方历史，不得外推为市场需求。",
+    "hubu_rpa 仅作为 collector；事实 provider 保持为 amazon_ads，未为搬运器新增来源行。",
+    "候选缺少市场、供应链和成本关键字段，因此未评分、未排序、未推荐。",
+    "profile 中唯一 learned 规则状态为 proposed，未参与评分。",
+    "真实市场数据链路未验证；仅 synthetic_demo 可用。"
+  ],
+  "platform_adapter": "amazon",
+  "recommended": [],
+  "report_path": "reports/eval-content/2026-07-13_hubu-transported-ads.md",
+  "rule_effects": [],
+  "seller_id": "eval-content",
+  "status": "blocked_missing_data"
+}

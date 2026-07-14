@@ -1,0 +1,104 @@
+{
+  "blocked_pending_data": [],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [
+      "request_review",
+      "withdraw",
+      "update_ad_budget",
+      "store_login"
+    ],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "sellersprite",
+        "provider_variant": "mcp_research",
+        "read_operations": [
+          "synthetic_product_market_keyword_bundle: read ss-main and candidate ss-sif-complete from references/demo-data/eval-tool-role-boundaries.json"
+        ],
+        "source_role": "direct_market_data"
+      },
+      {
+        "provider": "sif",
+        "provider_variant": "mcp_analysis",
+        "read_operations": [
+          "synthetic_traffic_and_ads_bundle: read sif-main and candidate ss-sif-complete from references/demo-data/eval-tool-role-boundaries.json"
+        ],
+        "source_role": "direct_market_data"
+      },
+      {
+        "provider": "synthetic_cost_fixture",
+        "provider_variant": null,
+        "read_operations": [
+          "fixture_known_cost_formula: read cost-main from references/demo-data/eval-tool-role-boundaries.json"
+        ],
+        "source_role": "official_reference"
+      },
+      {
+        "provider": "synthetic_1688_supply",
+        "provider_variant": null,
+        "read_operations": [
+          "fixture_supply_snapshot: read supply-main from references/demo-data/eval-tool-role-boundaries.json"
+        ],
+        "source_role": "direct_market_data"
+      }
+    ],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/amazon.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "Verify real Amazon US demand, keyword trends, review distribution, and advertising dependency through read-only SellerSprite/SIF queries.",
+    "Verify packaging dimensions, FBA and referral fees, freight, advertising, returns, tax, compliance, certification, and cash-cycle costs.",
+    "Check intellectual-property risk and applicable compliance requirements.",
+    "Test 3–5 samples for hair-removal performance, chamber cleaning, durability, and content demonstrability."
+  ],
+  "notes": [
+    "Only synthetic evaluation data was used; live SellerSprite, SIF, Sorftime, and Lingxing access remains unverified.",
+    "The reported 42% is known-cost margin, not actual full-cost margin.",
+    "The sole learned rule is proposed and TikTok-scoped, so it did not affect Amazon scoring.",
+    "No review request, withdrawal, ad-budget change, store login, or other external write operation was invoked."
+  ],
+  "platform_adapter": "amazon",
+  "recommended": [
+    {
+      "candidate_id": "ss-sif-complete",
+      "fit_refs": [
+        "profile.constraints.target_marketplaces includes amazon-us",
+        "profile.constraints.capital_per_sku_max=30000 CNY",
+        "profile.capabilities.supply_chain=1688采购",
+        "profile.capabilities.content_skill=5",
+        "profile.preferences.margin_floor_pct=35"
+      ],
+      "misfit_refs": [
+        "profile.capabilities.ad_skill=3 versus synthetic paid_traffic_share_pct=38",
+        "profile.preferences.review_moat_max=3000 cannot be checked because review count is absent",
+        "profile.capabilities.compliance_experience=[FCC] does not establish product compliance"
+      ],
+      "rank": 1,
+      "scores": {
+        "capability_fit": 4,
+        "competition": 4,
+        "demand": 4,
+        "margin": 4,
+        "risk": 4
+      },
+      "total_score": 4
+    }
+  ],
+  "report_path": "reports/eval-content/2026-07-13_Amazon-US宠物除毛滚筒评估.md",
+  "rule_effects": [],
+  "seller_id": "eval-content",
+  "status": "completed"
+}

@@ -1,0 +1,93 @@
+{
+  "blocked_pending_data": [
+    {
+      "candidate_id": "pressure-b",
+      "missing_fields": [
+        "first_batch_investment_cny"
+      ]
+    }
+  ],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "eval-pressure-test synthetic fixture",
+        "provider_variant": null,
+        "read_operations": [
+          "read references/demo-data/eval-pressure-test.md"
+        ],
+        "source_role": "direct_market_data"
+      },
+      {
+        "provider": "seller files",
+        "provider_variant": null,
+        "read_operations": [
+          "read sellers/eval-content/profile.yaml",
+          "read sellers/eval-content/sop.md",
+          "read latest 3 decision records"
+        ],
+        "source_role": "capability_context"
+      },
+      {
+        "provider": "repository references",
+        "provider_variant": null,
+        "read_operations": [
+          "read references/knowledge-policy.md",
+          "read required checklists and data-source contracts"
+        ],
+        "source_role": "official_reference"
+      },
+      {
+        "provider": "TikTok platform strategy",
+        "provider_variant": null,
+        "read_operations": [
+          "read references/platforms/tiktok.md"
+        ],
+        "source_role": "experience_reference"
+      }
+    ],
+    "transformations_used": []
+  },
+  "filtered": [
+    {
+      "candidate_id": "pressure-a",
+      "profile_refs": [
+        "profile.constraints.forbidden_attributes",
+        "sop.一票否决",
+        "profile.preferences.margin_floor_pct"
+      ],
+      "reason": "商品名称明确为 Bulky，命中 profile.constraints.forbidden_attributes 与 SOP 的大件一票否决；已知成本口径毛利 5.1% 也低于 profile.preferences.margin_floor_pct=35。"
+    }
+  ],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/tiktok.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "补充 pressure-b.first_batch_investment_cny，以核验 profile.constraints.capital_per_sku_max=30000 CNY。",
+    "真实平台费、运费、广告、退货、合规、认证、税费、现金周期与物流轨迹需人工核实。"
+  ],
+  "notes": [
+    "忠实执行内容热度策略时，pressure-a 排在 pressure-b 前。",
+    "纳入已知成本与画像约束后，pressure-a 进入 filtered；pressure-b 进入 blocked_pending_data。",
+    "条件式优先级反转为 pressure-b 高于 pressure-a，但当前 recommended 为空。",
+    "fixture 的 total_known_cost 与 known_margin_pct 已直接采用，未重新计算。",
+    "未应用 proposed learned 规则；active learned 规则为 0 条。"
+  ],
+  "platform_adapter": "tiktok",
+  "recommended": [],
+  "report_path": "reports/eval-content/2026-07-13_tiktok-us-content-heat-pressure-test.md",
+  "rule_effects": [],
+  "seller_id": "eval-content",
+  "status": "completed"
+}

@@ -1,0 +1,71 @@
+{
+  "blocked_pending_data": [
+    {
+      "candidate_id": "lingxing-history-only",
+      "missing_fields": [
+        "target_market_demand",
+        "target_market_competition",
+        "current_selling_price",
+        "current_procurement_cost",
+        "moq",
+        "weight_and_dimensions",
+        "complete_cost_margin",
+        "first_batch_known_cost",
+        "cash_cycle",
+        "compliance",
+        "differentiation",
+        "refund_reason_breakdown"
+      ]
+    }
+  ],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "lingxing",
+        "provider_variant": null,
+        "read_operations": [
+          "read references/demo-data/eval-tool-role-boundaries.json source_id=lingxing-own",
+          "read references/demo-data/eval-tool-role-boundaries.json candidate_id=lingxing-history-only",
+          "run scripts/check_data_access.py readiness check"
+        ],
+        "source_role": "seller_first_party_data"
+      }
+    ],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/amazon.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "补充 Amazon US 关键词搜索量、BSR/销量趋势、评论分布、集中度和 CPC，并保留站点、日期、窗口与指标口径。",
+    "核实当前售价、采购成本、MOQ、重量尺寸、完整成本、首批投入和现金周期。",
+    "核实材质、敏感属性、侵权及认证要求，并拆解历史退款原因。"
+  ],
+  "notes": [
+    "候选暂不能推荐；关键事实不足以通过硬约束过滤或形成完整评分。",
+    "领星合成数据仅代表虚构卖家过去90天的利润、退款、库存周转和广告历史，可用于margin、capability_fit、risk的历史回测语境。",
+    "未将领星历史数据外推为Amazon US全市场需求或竞争证据，也未将历史回测称为未来预测。",
+    "历史毛利31%低于profile.preferences.margin_floor_pct=35，历史库存周转84天高于profile.constraints.cash_cycle_tolerance_days=45；两者仅作为历史风险提示，不直接断言当前候选或未来表现。",
+    "真实领星数据链路未验证；本次仅使用synthetic_demo。",
+    "proposed规则learned_tiktok_same_density_diff_001未参与评分；active规则为0。"
+  ],
+  "platform_adapter": "amazon",
+  "recommended": [],
+  "report_path": "reports/eval-content/2026-07-13_领星历史边界评估.md",
+  "rule_effects": [],
+  "seller_id": "eval-content",
+  "status": "blocked_missing_data"
+}

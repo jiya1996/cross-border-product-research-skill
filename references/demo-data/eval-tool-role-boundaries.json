@@ -291,8 +291,7 @@
         {"field": "known_cost_margin_pct", "source_id": "cost-main", "value": 42, "unit": "percent", "as_of": "2026-07-12"}
       ],
       "observations": [
-        {"kind": "fact", "text": "All numeric values are synthetic evaluation data."},
-        {"kind": "inference", "text": "SIF traffic share supports advertising-dependency analysis but does not independently prove market demand."}
+        {"kind": "fact", "text": "All numeric values are synthetic evaluation data."}
       ],
       "missing_fields": []
     },
@@ -319,9 +318,7 @@
         {"field": "supply_price_cny", "source_id": "supply-main", "value": 11, "unit": "CNY", "as_of": "2026-07-12"},
         {"field": "known_cost_margin_pct", "source_id": "cost-main", "value": 40, "unit": "percent", "as_of": "2026-07-12"}
       ],
-      "observations": [
-        {"kind": "inference", "text": "LinkFox creative tools may support image prototyping; this is not demand, sales or conversion evidence."}
-      ],
+      "observations": [],
       "missing_fields": []
     },
     {
@@ -332,8 +329,7 @@
       "facts": {},
       "evidence": [],
       "observations": [
-        {"kind": "user_profile", "text": "The fictional team declares access to Ziniao, AMZ123, Lingxing, Amazon Ads Academy and Google Translate."},
-        {"kind": "inference", "text": "These operating tools do not establish Amazon US product demand or economics."}
+        {"kind": "user_profile", "text": "The fictional team declares access to Ziniao, AMZ123, Lingxing, Amazon Ads Academy and Google Translate."}
       ],
       "missing_fields": ["target_market_demand", "competition", "price", "procurement_cost", "moq", "weight", "compliance"]
     },
@@ -388,8 +384,7 @@
         {"field": "historical_ad_spend_share_pct", "source_id": "lingxing-own", "value": 24, "unit": "percent", "as_of": "2026-07-12"}
       ],
       "observations": [
-        {"kind": "fact", "text": "Synthetic prior-90-day seller history can inform capability, margin and risk for this fictional account only."},
-        {"kind": "inference", "text": "This historical window is a backtest input, not a future-profit prediction or proof of total Amazon US demand."}
+        {"kind": "fact", "text": "The listed metrics are a synthetic prior-90-day export for fictional account eval_store_a."}
       ],
       "missing_fields": ["target_market_demand", "target_market_competition", "current_procurement_cost", "moq", "weight", "compliance"]
     },
@@ -409,8 +404,7 @@
         {"field": "seller_account_acos_pct", "source_id": "hubu-collector", "value": 29.76, "unit": "percent", "as_of": "2026-07-12"}
       ],
       "observations": [
-        {"kind": "fact", "text": "Synthetic Amazon Ads first-party report transported by a whitelisted Hubu RPA."},
-        {"kind": "inference", "text": "Hubu is the collector, not the factual provider; this seller-scoped report does not establish total market demand."}
+        {"kind": "fact", "text": "Synthetic Amazon Ads first-party report transported by a whitelisted Hubu RPA."}
       ],
       "missing_fields": ["target_market_demand", "target_market_competition", "current_procurement_cost", "moq", "weight", "compliance"]
     }

@@ -1,0 +1,104 @@
+{
+  "blocked_pending_data": [
+    {
+      "candidate_id": "ops-only",
+      "missing_fields": [
+        "target_market_demand",
+        "competition",
+        "price",
+        "procurement_cost",
+        "moq",
+        "weight",
+        "compliance"
+      ]
+    }
+  ],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "repository_fixture",
+        "provider_variant": "eval-tool-role-boundaries",
+        "read_operations": [
+          "read references/demo-data/eval-tool-role-boundaries.json candidate_id=ops-only"
+        ],
+        "source_role": "collection_only"
+      },
+      {
+        "provider": "ziniao",
+        "provider_variant": null,
+        "read_operations": [
+          "read declared tool availability only; no account, IP, device, Cookie, login-state, or market data accessed"
+        ],
+        "source_role": "capability_context"
+      },
+      {
+        "provider": "amz123",
+        "provider_variant": null,
+        "read_operations": [
+          "read declared tool availability only; no original market source discovered or accessed"
+        ],
+        "source_role": "discovery_only"
+      },
+      {
+        "provider": "lingxing",
+        "provider_variant": null,
+        "read_operations": [
+          "read declared ERP availability only; no seller report imported or queried"
+        ],
+        "source_role": "seller_first_party_data"
+      },
+      {
+        "provider": "amazon_ads",
+        "provider_variant": "academy",
+        "read_operations": [
+          "read declared learning-site availability only; no live market or seller advertising report accessed"
+        ],
+        "source_role": "official_reference"
+      },
+      {
+        "provider": "google_translate",
+        "provider_variant": null,
+        "read_operations": [
+          "read declared translation-tool availability only; no translation performed"
+        ],
+        "source_role": "transformation_only"
+      }
+    ],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/amazon.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "Obtain traceable Amazon US keyword/ASIN demand evidence with site, collection date, data window, and metric definitions.",
+    "Obtain Amazon US competition evidence including reviews, concentration, CPC or advertising dependency, with comparable metric scopes.",
+    "Obtain traceable supplier evidence for procurement cost, MOQ, weight, dimensions, lead time, customization, and packaging.",
+    "Verify selling price, complete cost basis, first-batch investment, cash cycle, margin against profile.preferences.margin_floor_pct=35, and capital against profile.constraints.capital_per_sku_max=30000 CNY.",
+    "Verify product attributes and compliance before applying profile and SOP hard constraints."
+  ],
+  "notes": [
+    "ops-only cannot be recommended or scored because tool ownership is not Amazon US demand, competition, cost, or supply-chain evidence.",
+    "The candidate remains blocked_pending_data rather than filtered because the missing facts do not establish a hard-constraint violation.",
+    "No active learned rule applied; the only learned rule is proposed and scoped to TikTok.",
+    "check_data_access.py reported SellerSprite, SIF, Sorftime, and Lingxing live queries as not verified; only the synthetic demo was ready."
+  ],
+  "platform_adapter": "amazon",
+  "recommended": [],
+  "report_path": "reports/eval-content/2026-07-13_ops-only-amazon-us.md",
+  "rule_effects": [],
+  "seller_id": "eval-content",
+  "status": "completed"
+}

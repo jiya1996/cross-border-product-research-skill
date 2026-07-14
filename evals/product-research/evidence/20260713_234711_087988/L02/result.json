@@ -1,0 +1,198 @@
+{
+  "blocked_pending_data": [],
+  "conclusion_type": "demand_hypothesis_only",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "repository_fixture",
+        "provider_variant": "eval-learned-transfer-candidates",
+        "read_operations": [
+          "read_file references/demo-data/eval-learned-transfer-candidates.md"
+        ],
+        "source_role": "direct_market_data"
+      },
+      {
+        "provider": "seller_memory",
+        "provider_variant": "profile-sop-decisions",
+        "read_operations": [
+          "read_file sellers/eval-content/profile.yaml",
+          "read_file sellers/eval-content/sop.md",
+          "read_file sellers/eval-content/decisions/2026-07-11_reject-a.md",
+          "read_file sellers/eval-content/decisions/2026-07-10_reject-b.md",
+          "read_file sellers/eval-content/decisions/2026-07-09_reject-c.md"
+        ],
+        "source_role": "capability_context"
+      },
+      {
+        "provider": "repository_reference",
+        "provider_variant": "knowledge-and-scoring-contracts",
+        "read_operations": [
+          "read_file references/knowledge-policy.md",
+          "read_file references/checklists/product-selection.md",
+          "read_file references/checklists/scoring-rubric.md",
+          "read_file references/data-sources/platform-data-map.md",
+          "read_file references/data-sources/adapter-contract.md",
+          "read_file references/data-sources/ecosystem-tool-role-map.md",
+          "read_file references/data-sources/tool-role-registry.json"
+        ],
+        "source_role": "official_reference"
+      },
+      {
+        "provider": "repository_reference",
+        "provider_variant": "tiktok-platform-strategy",
+        "read_operations": [
+          "read_file references/platforms/tiktok.md"
+        ],
+        "source_role": "experience_reference"
+      }
+    ],
+    "transformations_used": [
+      "structured_tag_subset_matching",
+      "aggregate_active_rule_deltas_then_single_clamp",
+      "four_dimension_hypothesis_weighting"
+    ]
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/tiktok.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "为 lr-d88、lr-a17、lr-c63、lr-b42 补齐采购、包装、头程、尾程、平台费、广告、退货、税费、合规及认证等完整单位成本，并核实毛利是否达到 profile.preferences.margin_floor_pct=35。",
+    "使用带采集日期、数据窗口和指标口径的 TikTok US 真实热门视频、互动、评论、商品及转化数据核实需求与竞争。",
+    "核实 lr-d88 的尺码适配、物流体积和退货风险。",
+    "核实 lr-b42 的承重、稳定性投诉与价格竞争。"
+  ],
+  "notes": [
+    "本次为 effect-only 合成假设实验；所有候选的 controlled_initial_investment_cny、controlled_cash_cycle_days 与 hard_constraint_status 均通过受控硬约束。",
+    "完整单位成本缺失，因此所有候选的 margin 与 total_score 均保持 N/A；候选未重复放入 blocked_pending_data。",
+    "真实市场数据链路未验证；scripts/check_data_access.py 仅确认 synthetic demo ready。",
+    "报告中的排序采用未重归一化的四维暂定小计，不构成完整商业机会总分。"
+  ],
+  "platform_adapter": "tiktok",
+  "recommended": [
+    {
+      "candidate_id": "lr-d88",
+      "fit_refs": [
+        "sop.判断习惯.TikTok优先三秒内展示痛点和前后对比",
+        "profile.capabilities.content_skill=5",
+        "profile.preferences.product_style includes 功能改良"
+      ],
+      "misfit_refs": [
+        "profile.capabilities.team_size=2",
+        "profile.preferences.competition_tolerance=medium"
+      ],
+      "rank": 1,
+      "scores": {
+        "capability_fit": 5,
+        "competition": 3,
+        "demand": 4,
+        "margin": null,
+        "risk": 3
+      },
+      "total_score": null
+    },
+    {
+      "candidate_id": "lr-a17",
+      "fit_refs": [
+        "profile.capabilities.content_skill=5",
+        "profile.preferences.product_style includes 功能改良",
+        "sop.判断习惯.TikTok优先三秒内展示痛点和前后对比"
+      ],
+      "misfit_refs": [
+        "sop.判断习惯.同款过多时必须给出可感知差异",
+        "profile.learned.learned_tiktok_same_density_diff_001"
+      ],
+      "rank": 2,
+      "scores": {
+        "capability_fit": 5,
+        "competition": 1,
+        "demand": 4,
+        "margin": null,
+        "risk": 4
+      },
+      "total_score": null
+    },
+    {
+      "candidate_id": "lr-c63",
+      "fit_refs": [
+        "profile.capabilities.content_skill=5",
+        "profile.preferences.product_style includes 功能改良",
+        "sop.判断习惯.TikTok优先三秒内展示痛点和前后对比"
+      ],
+      "misfit_refs": [
+        "sop.判断习惯.同款过多时必须给出可感知差异",
+        "profile.learned.learned_tiktok_same_density_diff_001"
+      ],
+      "rank": 3,
+      "scores": {
+        "capability_fit": 5,
+        "competition": 1,
+        "demand": 3,
+        "margin": null,
+        "risk": 4
+      },
+      "total_score": null
+    },
+    {
+      "candidate_id": "lr-b42",
+      "fit_refs": [
+        "profile.capabilities.content_skill=5",
+        "sop.判断习惯.TikTok优先三秒内展示痛点和前后对比"
+      ],
+      "misfit_refs": [
+        "sop.判断习惯.同款过多时必须给出可感知差异",
+        "profile.learned.learned_tiktok_same_density_diff_001",
+        "profile.preferences.competition_tolerance=medium"
+      ],
+      "rank": 4,
+      "scores": {
+        "capability_fit": 4,
+        "competition": 1,
+        "demand": 3,
+        "margin": null,
+        "risk": 4
+      },
+      "total_score": null
+    }
+  ],
+  "report_path": "reports/eval-content/2026-07-13_tiktok-us-learned-rule-transfer-hypothesis.md",
+  "rule_effects": [
+    {
+      "after": 1,
+      "before": 2,
+      "candidate_id": "lr-a17",
+      "delta": -1,
+      "dimension": "competition",
+      "rule_id": "learned_tiktok_same_density_diff_001"
+    },
+    {
+      "after": 1,
+      "before": 2,
+      "candidate_id": "lr-b42",
+      "delta": -1,
+      "dimension": "competition",
+      "rule_id": "learned_tiktok_same_density_diff_001"
+    },
+    {
+      "after": 1,
+      "before": 2,
+      "candidate_id": "lr-c63",
+      "delta": -1,
+      "dimension": "competition",
+      "rule_id": "learned_tiktok_same_density_diff_001"
+    }
+  ],
+  "seller_id": "eval-content",
+  "status": "completed"
+}

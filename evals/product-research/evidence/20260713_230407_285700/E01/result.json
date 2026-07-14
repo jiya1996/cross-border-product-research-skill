@@ -1,0 +1,35 @@
+{
+  "blocked_pending_data": [],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "none",
+    "sources_used": [],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [],
+    "platform_strategy": null,
+    "policy": "references/knowledge-policy.md",
+    "profile": null,
+    "sop": "sellers/eval-missing-profile/sop.md"
+  },
+  "manual_verification": [
+    "通过 intake-interview 补全并确认 sellers/eval-missing-profile/profile.yaml。",
+    "核实现有 sop.md 标题中的 seller_id“eval-content”与目标 seller_id“eval-missing-profile”不一致。",
+    "建档确认后重新发起 TikTok US 选品。"
+  ],
+  "notes": [
+    "profile.yaml 缺失，已按 product-research Skill 停止选品并转入 intake-interview。",
+    "未读取候选数据、决策记录或 TikTok 平台策略，未执行过滤、打分或推荐。",
+    "未创建推荐报告。"
+  ],
+  "platform_adapter": "tiktok",
+  "recommended": [],
+  "report_path": null,
+  "rule_effects": [],
+  "seller_id": "eval-missing-profile",
+  "status": "redirected_intake"
+}

@@ -5,11 +5,13 @@
   "additionalProperties": false,
   "required": [
     "status",
+    "conclusion_type",
     "seller_id",
     "platform_adapter",
     "report_path",
     "inputs_read",
     "data_access",
+    "rule_effects",
     "recommended",
     "filtered",
     "blocked_pending_data",
@@ -19,6 +21,14 @@
   "properties": {
     "status": {
       "enum": ["completed", "needs_input", "redirected_intake", "blocked_missing_data"]
+    },
+    "conclusion_type": {
+      "enum": [
+        "demand_hypothesis_only",
+        "supply_validation_only",
+        "commercial_recommendation",
+        "not_applicable"
+      ]
     },
     "seller_id": {"type": ["string", "null"]},
     "platform_adapter": {
@@ -88,6 +98,39 @@
         "denied_operations": {
           "type": "array",
           "items": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "rule_effects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rule_id", "candidate_id", "dimension", "delta", "before", "after"],
+        "properties": {
+          "rule_id": {"type": "string", "minLength": 1},
+          "candidate_id": {"type": "string", "minLength": 1},
+          "dimension": {
+            "enum": ["demand", "competition", "margin", "capability_fit", "risk"]
+          },
+          "delta": {
+            "type": "integer",
+            "minimum": -5,
+            "maximum": 5,
+            "description": "This rule's individual contribution before aggregation."
+          },
+          "before": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 5,
+            "description": "Dimension score before any active learned-rule delta."
+          },
+          "after": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 5,
+            "description": "Final score after summing all active deltas for this candidate and dimension, then clamping once. Rows in the same candidate-dimension group share before and after."
+          }
         }
       }
     },

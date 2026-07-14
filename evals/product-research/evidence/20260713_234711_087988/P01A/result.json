@@ -1,0 +1,93 @@
+{
+  "blocked_pending_data": [],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "repository_fixture",
+        "provider_variant": "eval_platform_comparison",
+        "read_operations": [
+          "read references/demo-data/eval-platform-comparison.md"
+        ],
+        "source_role": "direct_market_data"
+      }
+    ],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/amazon.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "完整成本字段缺失，需人工核实",
+    "真实市场数据链路未验证"
+  ],
+  "notes": [
+    "controlled_initial_investment_cny、controlled_cash_cycle_days 与 hard_constraint_status 已用于硬约束过滤。",
+    "margin 与 total_score 因完整成本字段缺失保持 N/A。",
+    "按候选个性化归因表逐项复核"
+  ],
+  "platform_adapter": "amazon",
+  "recommended": [
+    {
+      "candidate_id": "platform-search",
+      "fit_refs": [
+        "profile.constraints.capital_per_sku_max",
+        "profile.constraints.cash_cycle_tolerance_days",
+        "profile.capabilities.supply_chain",
+        "profile.preferences.review_moat_max"
+      ],
+      "misfit_refs": [
+        "profile.capabilities.content_skill",
+        "profile.capabilities.ad_skill"
+      ],
+      "rank": 1,
+      "scores": {
+        "capability_fit": 4,
+        "competition": 4,
+        "demand": 4.5,
+        "margin": null,
+        "risk": 4.5
+      },
+      "total_score": null
+    },
+    {
+      "candidate_id": "platform-visual",
+      "fit_refs": [
+        "profile.constraints.capital_per_sku_max",
+        "profile.constraints.cash_cycle_tolerance_days",
+        "profile.capabilities.supply_chain",
+        "profile.capabilities.content_skill",
+        "profile.preferences.product_style"
+      ],
+      "misfit_refs": [
+        "profile.capabilities.ad_skill",
+        "profile.preferences.competition_tolerance"
+      ],
+      "rank": 2,
+      "scores": {
+        "capability_fit": 4,
+        "competition": 3,
+        "demand": 1.5,
+        "margin": null,
+        "risk": 4.5
+      },
+      "total_score": null
+    }
+  ],
+  "report_path": "reports/eval-content/2026-07-13_amazon-us-controlled-platform-routing.md",
+  "rule_effects": [],
+  "seller_id": "eval-content",
+  "status": "completed"
+}

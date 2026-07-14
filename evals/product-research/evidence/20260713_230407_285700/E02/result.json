@@ -1,0 +1,34 @@
+{
+  "blocked_pending_data": [],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "none",
+    "sources_used": [],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [],
+    "platform_strategy": null,
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-missing-sop/profile.yaml",
+    "sop": null
+  },
+  "manual_verification": [
+    "需按 intake-interview 确认并创建 sellers/eval-missing-sop/sop.md，之后才能重新执行 TikTok US 选品。"
+  ],
+  "notes": [
+    "已完整读取 profile，但 sellers/eval-missing-sop/sop.md 不存在。",
+    "依据 AGENTS.md 与 product-research Skill，已停止选品并转入 intake-interview；未读取决策记录、候选数据或 TikTok 平台策略。",
+    "已读取 intake-interview 必读资料；未经用户确认不得创建 SOP。",
+    "未创建推荐报告，也未输出任何候选推荐。"
+  ],
+  "platform_adapter": "tiktok",
+  "recommended": [],
+  "report_path": null,
+  "rule_effects": [],
+  "seller_id": "eval-missing-sop",
+  "status": "redirected_intake"
+}

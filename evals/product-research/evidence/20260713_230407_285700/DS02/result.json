@@ -1,0 +1,93 @@
+{
+  "blocked_pending_data": [],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "synthetic_amazon_market",
+        "provider_variant": null,
+        "read_operations": [
+          "读取 fixture source_id=amazon-main 对 candidate_id=linkfox-assisted 的 Amazon US 合成需求与竞争证据"
+        ],
+        "source_role": "direct_market_data"
+      },
+      {
+        "provider": "synthetic_cost_fixture",
+        "provider_variant": null,
+        "read_operations": [
+          "读取 fixture source_id=cost-main 对 candidate_id=linkfox-assisted 的合成已知成本口径毛利"
+        ],
+        "source_role": "official_reference"
+      },
+      {
+        "provider": "synthetic_1688_supply",
+        "provider_variant": null,
+        "read_operations": [
+          "读取 fixture source_id=supply-main 对 candidate_id=linkfox-assisted 的合成供给证据"
+        ],
+        "source_role": "direct_market_data"
+      }
+    ],
+    "transformations_used": [
+      "linkfox_creative"
+    ]
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/amazon.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "真实 Amazon US 关键词搜索量、趋势、销量口径与 Top10 集中度",
+    "评论数/评分分布、CPC、品牌/卖家集中度与自然/广告流量结构",
+    "采购、平台费、头程、FBA、广告、退货、税费后的完整成本口径",
+    "包装后尺寸重量、交期、样品耐用性与退货风险",
+    "商标、专利、适用合规要求及费用"
+  ],
+  "notes": [
+    "报告已写盘并直接读取核对；未使用任何版本控制命令。",
+    "LinkFox 未进入 sources_used，也没有新增 transformation_only 来源行；仅在 transformations_used 中记录 linkfox_creative。",
+    "全部市场、成本与供给数字均为隔离评测用合成数据，真实市场数据链路未验证。"
+  ],
+  "platform_adapter": "amazon",
+  "recommended": [
+    {
+      "candidate_id": "linkfox-assisted",
+      "fit_refs": [
+        "profile.capabilities.supply_chain=1688采购",
+        "profile.capabilities.content_skill=5",
+        "profile.preferences.product_style=[轻创新, 功能改良, 情绪价值]",
+        "profile.preferences.margin_floor_pct=35",
+        "profile.constraints.capital_per_sku_max=30000"
+      ],
+      "misfit_refs": [
+        "profile.capabilities.ad_skill=3",
+        "profile.team_size=2",
+        "sop.判断习惯.同款过多时必须能从结构、套装或内容角度给出可感知差异"
+      ],
+      "rank": 1,
+      "scores": {
+        "capability_fit": 5,
+        "competition": 4,
+        "demand": 4,
+        "margin": 4,
+        "risk": 4
+      },
+      "total_score": 4.3
+    }
+  ],
+  "report_path": "reports/eval-content/2026-07-13_amazon-us-linkfox-assisted.md",
+  "rule_effects": [],
+  "seller_id": "eval-content",
+  "status": "completed"
+}

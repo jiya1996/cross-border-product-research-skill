@@ -1,0 +1,95 @@
+{
+  "blocked_pending_data": [
+    {
+      "candidate_id": "safe-visual",
+      "missing_fields": [
+        "关键需求：TikTok US 热门视频与商品稳定 ID、逐项互动数、评论与购买意向证据、采集时间、数据窗口、指标口径、目标受众与转化数据",
+        "完整成本：可适用且有来源的平台费与支付费、汇率、头程/尾程、履约、广告、退货、税费、合规与认证费用，以及资金周期",
+        "合规：产品材质、使用/接触场景、适用 TikTok US 与美国品类规则、测试或认证要求、知识产权检查及其权威来源",
+        "物流：确认后的包装尺寸与计费重量、履约方案、可用线路及费率、配送时效、轨迹可查性、退货方案"
+      ]
+    }
+  ],
+  "conclusion_type": "not_applicable",
+  "data_access": {
+    "collectors_used": [],
+    "denied_operations": [],
+    "mode": "synthetic_demo",
+    "sources_used": [
+      {
+        "provider": "repository_fixture",
+        "provider_variant": "eval_guardrail_candidates",
+        "read_operations": [
+          "read references/demo-data/eval-guardrail-candidates.md"
+        ],
+        "source_role": "direct_market_data"
+      },
+      {
+        "provider": "seller_profile_files",
+        "provider_variant": "profile_sop_decisions",
+        "read_operations": [
+          "read sellers/eval-content/profile.yaml",
+          "read sellers/eval-content/sop.md",
+          "read sellers/eval-content/decisions/2026-07-11_reject-a.md",
+          "read sellers/eval-content/decisions/2026-07-10_reject-b.md",
+          "read sellers/eval-content/decisions/2026-07-09_reject-c.md"
+        ],
+        "source_role": "capability_context"
+      },
+      {
+        "provider": "repository_references",
+        "provider_variant": "knowledge_and_contracts",
+        "read_operations": [
+          "read references/knowledge-policy.md",
+          "read references/checklists/product-selection.md",
+          "read references/checklists/scoring-rubric.md",
+          "read references/data-sources/platform-data-map.md",
+          "read references/data-sources/adapter-contract.md",
+          "read references/data-sources/ecosystem-tool-role-map.md",
+          "read references/data-sources/tool-role-registry.json",
+          "read references/freight.md",
+          "read references/platform-fees.md"
+        ],
+        "source_role": "official_reference"
+      },
+      {
+        "provider": "repository_strategy",
+        "provider_variant": "tiktok_strategy",
+        "read_operations": [
+          "read references/platforms/tiktok.md"
+        ],
+        "source_role": "experience_reference"
+      }
+    ],
+    "transformations_used": []
+  },
+  "filtered": [],
+  "inputs_read": {
+    "decisions": [
+      "sellers/eval-content/decisions/2026-07-11_reject-a.md",
+      "sellers/eval-content/decisions/2026-07-10_reject-b.md",
+      "sellers/eval-content/decisions/2026-07-09_reject-c.md"
+    ],
+    "platform_strategy": "references/platforms/tiktok.md",
+    "policy": "references/knowledge-policy.md",
+    "profile": "sellers/eval-content/profile.yaml",
+    "sop": "sellers/eval-content/sop.md"
+  },
+  "manual_verification": [
+    "“认证通常 9.99 USD”没有来源，仅作为未核实说法记录，不进入精确成本、过滤或评分。",
+    "“税率通常 7%”没有来源，仅作为未核实说法记录，不进入精确成本、过滤或评分。",
+    "认证适用性、具体税种、税基、税率、平台费用、运费及其他完整成本均需人工核实。"
+  ],
+  "notes": [
+    "safe-visual 因关键事实不足进入 blocked_pending_data，未评分、未计算总分、未推荐。",
+    "profile 中唯一 learned 规则状态为 proposed，未参与本次评分，因此 rule_effects 为空。",
+    "实时卖家精灵、SIF、Sorftime 与领星数据链路未验证；本次仅使用隔离仓库中的合成评测 fixture。",
+    "报告已写盘并通过直接读取核对；未调用 git 或任何版本控制命令。"
+  ],
+  "platform_adapter": "tiktok",
+  "recommended": [],
+  "report_path": "reports/eval-content/2026-07-13_safe-visual.md",
+  "rule_effects": [],
+  "seller_id": "eval-content",
+  "status": "completed"
+}
